@@ -9,6 +9,7 @@ public enum GemStoneType
     Saphire,
     Onyx,
     Emerald,
+    WildCard,
     Count
 }
 

@@ -87,7 +87,7 @@ GameObject:
   - component: {fileID: 8175099408894447130}
   - component: {fileID: 6192499244296777266}
   m_Layer: 5
-  m_Name: Diamond Tokens
+  m_Name: Token
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

@@ -1,13 +1,80 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
+using TMPro;
+using Unity.Netcode;
 using Unity.VisualScripting;
+using Unity.VisualScripting.Antlr3.Runtime;
 using UnityEngine;
+
+public struct TokenTable : INetworkSerializable
+{
+    public int[] TokenCounts;
+
+    public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
+    {
+        for (int i = 0; i < TokenCounts.Length; i++)
+        {
+            serializer.SerializeValue(ref TokenCounts[i]);
+        }
+    }
+}
+
+[System.Serializable]
+public class TokenUITable
+{
+    public TMP_Text[] tokenTexts;
+    public BoardGemBehaviour[] boardGemBehaviours;
+}
+
 
 public class CardManager : MonoBehaviour
 {
+    public TokenTable boardTable;
+    public TokenTable playerTable;
 
-    public int[] RandomIndexes(int count, int maxInclusive)
+    public TokenUITable boardUI;
+    public TokenUITable inventoryUI;
+    private CardManager instance;
+    public CardManager Instance => instance;
+    public int[] TokensInHand;
+
+    void Awake()
+    {
+        instance = this;
+    }
+    public void OnTokenClicked(GemStoneType type)
+    {
+        // TODO: Fix this bug.
+        int tokenCount = boardTable.TokenCounts[(int)type];
+        
+        TokensInHand[(int)type]++;
+
+        bool safe = true;
+        int maxStack = 0;
+        for(int i = 0; i < TokensInHand.Length; i++)
+        {
+            if (TokensInHand[i] > maxStack)
+                maxStack = TokensInHand[i];
+        }
+        if (TokensInHand.Sum() > 3 || maxStack > 2 || (maxStack > 1 && TokensInHand.Sum() > 2))
+            safe = false;
+
+        if (tokenCount < 1 || !safe)
+        {            
+            TokensInHand[(int)type]--;
+            return;
+        }
+
+        tokenCount--;
+        boardTable.TokenCounts[(int)type] = tokenCount;
+
+        boardUI.tokenTexts[(int)type].text = "x" + tokenCount.ToString();
+    }
+
+
+    public int[] RandomUniqueIndexes(int count, int maxInclusive)
     {
         List<int> values = new List<int>();
 
@@ -76,9 +143,9 @@ public class CardManager : MonoBehaviour
             0, 0, 0, 0, 0
         };
         
-        Action<int, int, int> PopulateIndexArray = (count, minInclusive, maxInclusive) =>
+        Action<int, int, int> RandomizeGemCosts = (count, minInclusive, maxInclusive) =>
         {
-            int[] randIndexes = RandomIndexes(count, 4);
+            int[] randIndexes = RandomUniqueIndexes(count, 4);
             
             for(int idx = 0; idx < count; idx++)
                 gemCosts[randIndexes[idx]] = UnityEngine.Random.Range(minInclusive, maxInclusive + 1);
@@ -96,8 +163,8 @@ public class CardManager : MonoBehaviour
 
                 switch(gemPrefabCount)
                 {
-                    case 1: PopulateIndexArray(1, 2, 3); break;
-                    case 2: PopulateIndexArray(2, 1, 2); break;
+                    case 1: RandomizeGemCosts(1, 2, 3); break;
+                    case 2: RandomizeGemCosts(2, 1, 2); break;
                 }
             }
             else if (prestiegeRand <= 70f) // 1 Prestige Point.
@@ -107,9 +174,9 @@ public class CardManager : MonoBehaviour
             
                 switch(gemPrefabCount)
                 {
-                    case 1: PopulateIndexArray(1, 3, 4); break;
-                    case 2: PopulateIndexArray(2, 2, 3); break;
-                    case 3: PopulateIndexArray(3, 1, 2); break;
+                    case 1: RandomizeGemCosts(1, 3, 4); break;
+                    case 2: RandomizeGemCosts(2, 2, 3); break;
+                    case 3: RandomizeGemCosts(3, 1, 2); break;
                 }
             }
             else // 2 Prestige Points.
@@ -119,16 +186,16 @@ public class CardManager : MonoBehaviour
 
                 switch(gemPrefabCount)
                 {
-                    case 1: PopulateIndexArray(1, 6, 7); break;
-                    case 2: PopulateIndexArray(2, 4, 5); break;
-                    case 3: PopulateIndexArray(3, 3, 4); break;
-                    case 4: PopulateIndexArray(4, 2, 3); break;
+                    case 1: RandomizeGemCosts(1, 6, 7); break;
+                    case 2: RandomizeGemCosts(2, 4, 5); break;
+                    case 3: RandomizeGemCosts(3, 3, 4); break;
+                    case 4: RandomizeGemCosts(4, 2, 3); break;
                 }
             }
 
             Debug.Log(i + " - Gem Stone Values: " + IntArrayToList(gemCosts));
             
-            GemStoneType randGemType = (GemStoneType)UnityEngine.Random.Range(0, (int)GemStoneType.Count); 
+            GemStoneType randGemType = (GemStoneType)UnityEngine.Random.Range(0, 5); 
 
             cards[i].SetCard(randGemType, prestige, gemCosts[0], gemCosts[1], gemCosts[2], gemCosts[3], gemCosts[4]);
             
@@ -165,7 +232,15 @@ public class CardManager : MonoBehaviour
             cards[i] = cardBoardTransform.GetChild(i).GetComponent<CardBehaviour>();
         }
 
+        for(int i = 0; i < boardUI.boardGemBehaviours.Length; i++)
+        {
+            boardUI.boardGemBehaviours[i].onTokenClicked += OnTokenClicked;
+        }
+
         ScrambleBoard(cardCount);
+
+        boardTable.TokenCounts = new int[(int)GemStoneType.Count] { 4, 4, 4, 4, 4, 4 };
+        TokensInHand = new int[6]{0,0,0,0,0,0};
     }
     // --- Helper Functions ---
 
