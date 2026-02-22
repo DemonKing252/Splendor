@@ -1,8 +1,8 @@
-using System.Threading.Tasks;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class BoardGemBehaviour : MonoBehaviour
+public class BoardTokenBehaviour : NetworkBehaviour
 {
     public delegate void OnTokenClicked(GemStoneType type);
     public event OnTokenClicked onTokenClicked;
@@ -11,6 +11,7 @@ public class BoardGemBehaviour : MonoBehaviour
 
     void Start()
     {
-        GetComponent<Button>().onClick.AddListener(() => { onTokenClicked?.Invoke(gemStoneType); });
+        if (!IsServer)
+            GetComponent<Button>().onClick.AddListener(() => { onTokenClicked?.Invoke(gemStoneType); });     
     }
 }

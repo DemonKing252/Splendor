@@ -2,6 +2,9 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+using Unity.Netcode;
+
+[System.Serializable]
 public enum GemStoneType
 {
     Diamond,

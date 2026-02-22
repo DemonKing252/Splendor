@@ -18,7 +18,7 @@ public class ServerManager : NetworkBehaviour
         instance = this;
     }
 
-    void OnNetworkStart()
+    public override void OnNetworkSpawn()
     {
         if (NetworkManager.Singleton.IsServer)
         {            
@@ -31,17 +31,14 @@ public class ServerManager : NetworkBehaviour
     void OnClientConnected(ulong clientID)
     {
         // Only the Host/Client can spawn the player.
-        if (!NetworkManager.Singleton.IsServer) 
-            return;
 
         Debug.Log("Client joined the server at ID: " + clientID);
+        CardManager.Instance.SyncBoardClientRpc(CardManager.Instance.networkCards, 4);
 
     }
     void OnClientDisconnected(ulong clientID)
     {
         // Only the Host/Client can spawn the player.
-        if (!NetworkManager.Singleton.IsServer) 
-            return;
 
         Debug.Log("Client disconnected the server at ID: " + clientID);
     }

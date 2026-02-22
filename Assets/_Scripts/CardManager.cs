@@ -2,14 +2,17 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using NUnit.Framework.Constraints;
 using TMPro;
 using Unity.Netcode;
 using Unity.VisualScripting;
 using Unity.VisualScripting.Antlr3.Runtime;
+using UnityEditor;
 using UnityEngine;
 
 public struct TokenTable : INetworkSerializable
 {
+    public BoardTokenBehaviour[] tokens;
     public int[] TokenCounts;
 
     public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
@@ -19,35 +22,75 @@ public struct TokenTable : INetworkSerializable
             serializer.SerializeValue(ref TokenCounts[i]);
         }
     }
-}
 
+}
 [System.Serializable]
 public class TokenUITable
 {
     public TMP_Text[] tokenTexts;
-    public BoardGemBehaviour[] boardGemBehaviours;
+}
+
+public struct NetworkCard : INetworkSerializable
+{
+    public ulong NetworkID;
+    public CardBehaviour cardGO;
+    public GemStoneType gemStoneType;
+    /*
+        diamondCount,
+        rubyCount,
+        saphireCount,
+        onyxCount,
+        emeraldCount
+    */
+    public int presteigeCount;
+    public int diamondCount;
+    public int rubyCount;
+    public int saphireCount;
+    public int onyxCount;
+    public int emeraldCount;
+
+    public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
+    {
+        serializer.SerializeValue(ref gemStoneType);
+        serializer.SerializeValue(ref presteigeCount);
+        serializer.SerializeValue(ref diamondCount);
+        serializer.SerializeValue(ref rubyCount);
+        serializer.SerializeValue(ref saphireCount);
+        serializer.SerializeValue(ref onyxCount);
+        serializer.SerializeValue(ref emeraldCount);
+        serializer.SerializeValue(ref NetworkID);
+    }
 }
 
 
-public class CardManager : MonoBehaviour
+
+
+public class CardManager : NetworkBehaviour
 {
-    public TokenTable boardTable;
-    public TokenTable playerTable;
+    public NetworkCard[] networkCards;
+    [SerializeField] private Transform cardBoardTransform;
+    [SerializeField] private Transform boardTokenTableTransform;
+
+    public TokenTable boardTokenTable;
+    public TokenTable playerTokenTable;
 
     public TokenUITable boardUI;
-    public TokenUITable inventoryUI;
-    private CardManager instance;
-    public CardManager Instance => instance;
+    //public TokenUITable inventoryUI;
+    private static CardManager instance;
+    public static CardManager Instance => instance;
     public int[] TokensInHand;
 
     void Awake()
     {
         instance = this;
     }
+
+
     public void OnTokenClicked(GemStoneType type)
     {
+        Debug.Log("Updating token...");
         // TODO: Fix this bug.
-        int tokenCount = boardTable.TokenCounts[(int)type];
+        int tokenCount = boardTokenTable.TokenCounts[(int)type];
         
         TokensInHand[(int)type]++;
 
@@ -58,6 +101,10 @@ public class CardManager : MonoBehaviour
             if (TokensInHand[i] > maxStack)
                 maxStack = TokensInHand[i];
         }
+        // Rules for Splendor:
+        // 1. Sum of tokens cannot exceed 3.
+        // 2. No more then 2 tokens per stack.
+        // 3. No more tokens if there's already 2 collected in any given stack.
         if (TokensInHand.Sum() > 3 || maxStack > 2 || (maxStack > 1 && TokensInHand.Sum() > 2))
             safe = false;
 
@@ -67,10 +114,33 @@ public class CardManager : MonoBehaviour
             return;
         }
 
-        tokenCount--;
-        boardTable.TokenCounts[(int)type] = tokenCount;
 
-        boardUI.tokenTexts[(int)type].text = "x" + tokenCount.ToString();
+        tokenCount--;
+        boardTokenTable.TokenCounts[(int)type] = tokenCount;
+        
+        int[] tokens = new int[6]
+        {
+            boardTokenTable.TokenCounts[0],            
+            boardTokenTable.TokenCounts[1],
+            boardTokenTable.TokenCounts[2],
+            boardTokenTable.TokenCounts[3],
+            boardTokenTable.TokenCounts[4],
+            boardTokenTable.TokenCounts[5]
+        };
+
+        UpdateBoardTokenNetworkClientRpc(tokens);
+
+        //boardUI.tokenTexts[(int)type].text = "x" + tokenCount.ToString();
+    }
+
+    [Rpc(SendTo.ClientsAndHost, InvokePermission = RpcInvokePermission.Everyone)]
+    public void UpdateBoardTokenNetworkClientRpc(int[] tokenCounts)
+    {
+        for (int idx = 0; idx < tokenCounts.Length; idx++)
+        {
+            boardTokenTable.TokenCounts[idx] = tokenCounts[idx];
+            boardUI.tokenTexts[idx].text = "x" + tokenCounts[idx].ToString();
+        }
     }
 
 
@@ -197,50 +267,109 @@ public class CardManager : MonoBehaviour
             
             GemStoneType randGemType = (GemStoneType)UnityEngine.Random.Range(0, 5); 
 
-            cards[i].SetCard(randGemType, prestige, gemCosts[0], gemCosts[1], gemCosts[2], gemCosts[3], gemCosts[4]);
+            /*
+            diamondCount,
+            rubyCount,
+            saphireCount,
+            onyxCount,
+            emeraldCount
+            */
+            networkCards[i].presteigeCount = prestige;
+            networkCards[i].diamondCount = gemCosts[0];
+            networkCards[i].rubyCount = gemCosts[1];
+            networkCards[i].saphireCount = gemCosts[2];
+            networkCards[i].onyxCount = gemCosts[3];
+            networkCards[i].emeraldCount = gemCosts[4]; 
+
+            //networkCards[i].cardGO.SetCard(randGemType, prestige, gemCosts[0], gemCosts[1], gemCosts[2], gemCosts[3], gemCosts[4]);
             
             for(int idx = 0; idx < gemCosts.Length; idx++)
                 gemCosts[idx] = 0;
         }
     }
 
-    // TODO: RescrambleBoard at Index I
-    public void RescrambleBoard()
+    //[Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+    
+    [Rpc(SendTo.ClientsAndHost, InvokePermission = RpcInvokePermission.Everyone)]
+    public void SyncBoardClientRpc(NetworkCard[] netCards, int TokenStock)
     {
-        
+        Debug.Log("Setting up board [Client = " + (IsClient || IsHost).ToString() + "]");
+        for(int i = 0; i < netCards.Length; i++)
+        {
+            NetworkCard card = netCards[i];
+
+            //Debug.Log("Card Net ID: " + networkCards[i].cardGO.GetComponent<NetworkObject>().NetworkObjectId);
+            ulong netid = networkCards[i].cardGO.GetComponent<NetworkObject>().NetworkObjectId;
+
+            Debug.Log("Net ID: " + netid + ", P: " + card.presteigeCount + " " + card.diamondCount);
+
+            networkCards[i].cardGO.SetCard(card.gemStoneType, 
+                card.presteigeCount, 
+                card.diamondCount, 
+                card.rubyCount, 
+                card.saphireCount, 
+                card.onyxCount, 
+                card.emeraldCount
+            );
+
+            //networkCards[i].NetworkID = networkCards[i].cardGO.GetComponent<NetworkObject>().NetworkObjectId;
+        }
+        for (int idx = 0; idx < boardTokenTable.TokenCounts.Length; idx++)
+        {
+            boardTokenTable.TokenCounts[idx] = TokenStock;
+        }
+        for (int idx = 0; idx < boardTokenTable.TokenCounts.Length; idx++)
+        {
+            boardUI.tokenTexts[idx].text = "x" + TokenStock.ToString();
+        }
     }
-
-
-    [SerializeField]
-    private Transform cardBoardTransform;
-
-    public CardBehaviour[] cards;
+    
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    public override void OnNetworkSpawn()
     {
         int cardCount = cardBoardTransform.childCount;
-        cards = new CardBehaviour[cardCount];
+        networkCards = new NetworkCard[12];
 
         if (cardCount != 12)
         {
             Debug.LogError("ERROR: Card count is not supposed to be: " + cardCount);
         }
 
-        for(int i = 0; i < cardCount; i++)
-        {
-            cards[i] = cardBoardTransform.GetChild(i).GetComponent<CardBehaviour>();
-        }
-
-        for(int i = 0; i < boardUI.boardGemBehaviours.Length; i++)
-        {
-            boardUI.boardGemBehaviours[i].onTokenClicked += OnTokenClicked;
-        }
-
-        ScrambleBoard(cardCount);
-
-        boardTable.TokenCounts = new int[(int)GemStoneType.Count] { 4, 4, 4, 4, 4, 4 };
+        // Server sets up the board
+        
+        // Server Sets up Board -> Client recieves the board map & sets up network Ids -> S
+        boardTokenTable.TokenCounts = new int[(int)GemStoneType.Count] { 4, 4, 4, 4, 4, 4 };
+        boardTokenTable.tokens = new BoardTokenBehaviour[12];
         TokensInHand = new int[6]{0,0,0,0,0,0};
+
+        if (IsServer)
+        {
+            ScrambleBoard(cardCount);
+            Debug.Log("Starting Server...");            
+        }
+        // Client/Host leave the board blank until the server authorizes the scramble (check ServerRpc)
+        if (IsHost || IsClient)
+        {
+            
+            for(int i = 0; i < cardCount; i++)
+            {
+                networkCards[i].cardGO = cardBoardTransform.GetChild(i).GetComponent<CardBehaviour>();
+            }
+
+            for (int i = 0; i < boardTokenTableTransform.childCount; i++)
+            {                
+                boardTokenTable.tokens[i] = boardTokenTableTransform.GetChild(i).GetComponent<BoardTokenBehaviour>();
+            }
+
+            for(int i = 0; i < boardTokenTable.TokenCounts.Length; i++)
+            {
+                boardTokenTable.tokens[i].onTokenClicked += OnTokenClicked;
+            }
+            Debug.Log("Starting Client/Host");
+        }
+
+        
     }
     // --- Helper Functions ---
 
