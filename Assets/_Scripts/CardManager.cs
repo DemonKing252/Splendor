@@ -17,10 +17,14 @@ public struct TokenTable : INetworkSerializable
 
     public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
     {
-        for (int i = 0; i < TokenCounts.Length; i++)
-        {
+        int length = TokenCounts == null ? 0 : TokenCounts.Length;
+        serializer.SerializeValue(ref length);
+
+        if (serializer.IsReader)
+            TokenCounts = new int[length];
+
+        for (int i = 0; i < length; i++)
             serializer.SerializeValue(ref TokenCounts[i]);
-        }
     }
 
 }
@@ -88,7 +92,7 @@ public class CardManager : NetworkBehaviour
 
     public void OnTokenClicked(GemStoneType type)
     {
-        Debug.Log("Updating token...");
+        //Debug.Log("Updating token...");
         // TODO: Fix this bug.
         int tokenCount = boardTokenTable.TokenCounts[(int)type];
         
@@ -127,19 +131,35 @@ public class CardManager : NetworkBehaviour
             boardTokenTable.TokenCounts[4],
             boardTokenTable.TokenCounts[5]
         };
-
-        UpdateBoardTokenNetworkClientRpc(tokens);
-
-        //boardUI.tokenTexts[(int)type].text = "x" + tokenCount.ToString();
+        // Client -> Server -> Clients and Hosts
+        UpdateBoardTokenNetworkServerRpc(boardTokenTable);
     }
+    
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+    public void UpdateBoardTokenNetworkServerRpc(TokenTable boardTokenTable)
+    {
+        UpdateBoardTokenNetworkClientRpc(boardTokenTable);
+    } 
 
     [Rpc(SendTo.ClientsAndHost, InvokePermission = RpcInvokePermission.Everyone)]
-    public void UpdateBoardTokenNetworkClientRpc(int[] tokenCounts)
+    public void UpdateBoardTokenNetworkClientRpc(TokenTable boardTokenTable)
     {
-        for (int idx = 0; idx < tokenCounts.Length; idx++)
+        for(int i = 0; i < boardTokenTable.TokenCounts.Length; i++)
         {
-            boardTokenTable.TokenCounts[idx] = tokenCounts[idx];
-            boardUI.tokenTexts[idx].text = "x" + tokenCounts[idx].ToString();
+            Debug.Log("Token Serialized: " + boardTokenTable.TokenCounts[0] + " "
+            + boardTokenTable.TokenCounts[1] + " "
+            + boardTokenTable.TokenCounts[2] + " "
+            + boardTokenTable.TokenCounts[3] + " "
+            + boardTokenTable.TokenCounts[4] + " "
+            + boardTokenTable.TokenCounts[5] + " ");
+
+
+        }
+
+        for (int idx = 0; idx < boardTokenTable.TokenCounts.Length; idx++)
+        {
+            boardTokenTable.TokenCounts[idx] = boardTokenTable.TokenCounts[idx];
+            boardUI.tokenTexts[idx].text = "x" + boardTokenTable.TokenCounts[idx].ToString();
         }
     }
 
@@ -263,7 +283,7 @@ public class CardManager : NetworkBehaviour
                 }
             }
 
-            Debug.Log(i + " - Gem Stone Values: " + IntArrayToList(gemCosts));
+            //Debug.Log(i + " - Gem Stone Values: " + IntArrayToList(gemCosts));
             
             GemStoneType randGemType = (GemStoneType)UnityEngine.Random.Range(0, 5); 
 
@@ -288,20 +308,16 @@ public class CardManager : NetworkBehaviour
         }
     }
 
-    //[Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-    
     [Rpc(SendTo.ClientsAndHost, InvokePermission = RpcInvokePermission.Everyone)]
     public void SyncBoardClientRpc(NetworkCard[] netCards, int TokenStock)
     {
-        Debug.Log("Setting up board [Client = " + (IsClient || IsHost).ToString() + "]");
+        //Debug.Log("Setting up board [Client = " + (IsClient || IsHost).ToString() + "]");
         for(int i = 0; i < netCards.Length; i++)
         {
             NetworkCard card = netCards[i];
-
-            //Debug.Log("Card Net ID: " + networkCards[i].cardGO.GetComponent<NetworkObject>().NetworkObjectId);
             ulong netid = networkCards[i].cardGO.GetComponent<NetworkObject>().NetworkObjectId;
 
-            Debug.Log("Net ID: " + netid + ", P: " + card.presteigeCount + " " + card.diamondCount);
+            //Debug.Log("Net ID: " + netid + ", P: " + card.presteigeCount + " " + card.diamondCount);
 
             networkCards[i].cardGO.SetCard(card.gemStoneType, 
                 card.presteigeCount, 
@@ -311,17 +327,12 @@ public class CardManager : NetworkBehaviour
                 card.onyxCount, 
                 card.emeraldCount
             );
-
-            //networkCards[i].NetworkID = networkCards[i].cardGO.GetComponent<NetworkObject>().NetworkObjectId;
         }
         for (int idx = 0; idx < boardTokenTable.TokenCounts.Length; idx++)
-        {
             boardTokenTable.TokenCounts[idx] = TokenStock;
-        }
+
         for (int idx = 0; idx < boardTokenTable.TokenCounts.Length; idx++)
-        {
             boardUI.tokenTexts[idx].text = "x" + TokenStock.ToString();
-        }
     }
     
 
@@ -339,6 +350,7 @@ public class CardManager : NetworkBehaviour
         // Server sets up the board
         
         // Server Sets up Board -> Client recieves the board map & sets up network Ids -> S
+        boardTokenTable = new TokenTable();
         boardTokenTable.TokenCounts = new int[(int)GemStoneType.Count] { 4, 4, 4, 4, 4, 4 };
         boardTokenTable.tokens = new BoardTokenBehaviour[12];
         TokensInHand = new int[6]{0,0,0,0,0,0};
@@ -350,26 +362,18 @@ public class CardManager : NetworkBehaviour
         }
         // Client/Host leave the board blank until the server authorizes the scramble (check ServerRpc)
         if (IsHost || IsClient)
-        {
-            
+        {        
             for(int i = 0; i < cardCount; i++)
-            {
                 networkCards[i].cardGO = cardBoardTransform.GetChild(i).GetComponent<CardBehaviour>();
-            }
 
-            for (int i = 0; i < boardTokenTableTransform.childCount; i++)
-            {                
+            for (int i = 0; i < boardTokenTableTransform.childCount; i++)             
                 boardTokenTable.tokens[i] = boardTokenTableTransform.GetChild(i).GetComponent<BoardTokenBehaviour>();
-            }
 
             for(int i = 0; i < boardTokenTable.TokenCounts.Length; i++)
-            {
                 boardTokenTable.tokens[i].onTokenClicked += OnTokenClicked;
-            }
+
             Debug.Log("Starting Client/Host");
         }
-
-        
     }
     // --- Helper Functions ---
 
