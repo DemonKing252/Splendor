@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Unity.Netcode;
 using Unity.VisualScripting;
@@ -8,8 +9,11 @@ public class ServerManager : NetworkBehaviour
 {
     public List<ulong> clientIDs = new List<ulong>();
     public NetworkVariable<ulong> playerTurn = new NetworkVariable<ulong>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
-    public int playerIndexTurn = 0;
+    public int playerTurnIndex = 0;
     public bool IsMyTurn => NetworkManager.Singleton.LocalClientId == playerTurn.Value ? true : false;
+    
+    // Returns true when the application runs as a server, NOT as a Host.
+    public bool IsExplicitServer => IsServer && !IsHost;
 
     private static ServerManager instance;
     public static ServerManager Instance
@@ -25,33 +29,47 @@ public class ServerManager : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         if (IsServer)
-        {            
-            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
-            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
-            
+        {
             // start with player 0.
             playerTurn.Value = 0;
-            playerIndexTurn = 0;
+            playerTurnIndex = 0;
+
+            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
         }
-        else if (IsClient || IsHost)
-        {
-            Debug.Log("Initializing client [Owner | Current Turn]: " + NetworkManager.Singleton.LocalClientId + " " + playerTurn.Value);
-            playerTurn.OnValueChanged += UpdatePlayerTurnStatus;
+        // If the app runs as a Host but not a server *explicitly*
+        if (!IsExplicitServer)
+        {       
+            playerTurn.OnValueChanged += UpdatePlayerTurnStatus;            
             UpdatePlayerTurnStatus(0, 0);
-        }
+        }        
 
     }
-    public void NextPlayerTurn()
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+    public void NextTurnServerRpc()
     {
-        
+        try
+        {           
+            // Next players turn.
+            playerTurnIndex = (playerTurnIndex + 1) % clientIDs.Count;
+            playerTurn.Value = clientIDs[playerTurnIndex];
+            Debug.Log("Player: " + playerTurn.Value + " turn.");
+        }
+        catch(Exception e)
+        {
+            Debug.Log("Exception on Server: " + e.Message);
+        }
     }
     public void UpdatePlayerTurnStatus(ulong oldValue, ulong newValue)
     {
+        Debug.Log("Updating text: " + newValue);
+
+        // This client's IP address matches the IP address of who's turn it is:
         if (NetworkManager.Singleton.LocalClientId == playerTurn.Value)
             CardManager.Instance.playerTurnText.text = "It's your turn!";
         else
             // TODO: Eventually support usernames.
-            CardManager.Instance.playerTurnText.text = "It's players: " + NetworkManager.Singleton.LocalClientId + " turn!"; 
+            CardManager.Instance.playerTurnText.text = "It's player's " + NetworkManager.Singleton.LocalClientId + " turn!"; 
 
     }
 

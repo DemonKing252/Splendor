@@ -481,19 +481,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 144927897}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1270384321}
-        m_TargetAssemblyTypeName: CardManager, Assembly-CSharp
-        m_MethodName: OnConfirmClicked
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &144927897
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -856,19 +844,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 220724190}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 1270384321}
-        m_TargetAssemblyTypeName: CardManager, Assembly-CSharp
-        m_MethodName: CancelledClicked
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &220724190
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -4116,7 +4092,7 @@ MonoBehaviour:
   clientIDs: 
   playerTurn:
     m_InternalValue: 0
-  playerIndexTurn: 0
+  playerTurnIndex: 0
 --- !u!4 &877859932
 Transform:
   m_ObjectHideFlags: 0
@@ -4180,7 +4156,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 22400762, guid: 67117722a812a2e46ab8cb8eafbf5f5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.000049591064
+      value: -0.00008010864
       objectReference: {fileID: 0}
     - target: {fileID: 22426080, guid: 67117722a812a2e46ab8cb8eafbf5f5e, type: 3}
       propertyPath: m_AnchorMax.x
@@ -9278,7 +9254,7 @@ MonoBehaviour:
   m_DisconnectTimeoutMS: 30000
   ConnectionData:
     Address: 127.0.0.1
-    Port: 54921
+    Port: 65535
     ServerListenAddress: 127.0.0.1
     ClientBindPort: 0
   DebugSimulator:

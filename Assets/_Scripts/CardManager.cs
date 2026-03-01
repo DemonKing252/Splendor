@@ -60,9 +60,6 @@ public struct NetworkCard : INetworkSerializable
     }
 }
 
-
-
-
 public class CardManager : NetworkBehaviour
 {
     public NetworkCard[] networkCards;
@@ -73,7 +70,6 @@ public class CardManager : NetworkBehaviour
     [SerializeField] public Button confirmBtn;
     [SerializeField] public Button cancelBtn;
         
-
     public NetworkToken[] boardTokens;
     public NetworkToken[] inventoryTokens;
 
@@ -89,19 +85,24 @@ public class CardManager : NetworkBehaviour
     {
         instance = this;
     }
-    void Start()
-    {
-        confirmBtn.onClick.AddListener(() => OnConfirmClicked() );
-        cancelBtn.onClick.AddListener(() => CancelledClicked() );
-    }
 
     public void OnConfirmClicked()
     {
+        //if (IsServer)
+        //    return;
+
+        Debug.Log("Clicking the button");
         for (int idx = 0; idx < inventoryTokens.Length; idx++)
         {
             inventoryUI.tokenTexts[idx].text = "x" + inventoryTokens[idx].TokenCount.ToString();
         }
         confirmMsgGo.SetActive(false);
+
+        
+        for(int i = 0; i < TokensInHand.Length; i++)
+            TokensInHand[i] = 0;
+
+        ServerManager.Instance.NextTurnServerRpc();
     }
     public void CancelledClicked()
     {
@@ -109,7 +110,10 @@ public class CardManager : NetworkBehaviour
     }
 
     public void OnTokenClicked(GemStoneType type)
-    {        
+    {
+        if (!ServerManager.Instance.IsMyTurn)
+            return;
+
         int tokenCount = boardTokens[(int)type].TokenCount;
         
         TokensInHand[(int)type]++;
@@ -159,7 +163,7 @@ public class CardManager : NetworkBehaviour
     {
         for (int idx = 0; idx < netTokens.Length; idx++)
         {
-            Debug.Log("Updating Token count to be: " + netTokens[idx].TokenCount.ToString());
+            //Debug.Log("Updating Token count to be: " + netTokens[idx].TokenCount.ToString());
             boardTokens[idx].TokenCount = netTokens[idx].TokenCount;
             boardUI.tokenTexts[idx].text = "x" + netTokens[idx].TokenCount.ToString();
         }
@@ -341,11 +345,18 @@ public class CardManager : NetworkBehaviour
         for (int idx = 0; idx < boardUI.tokenTexts.Length; idx++)
             boardUI.tokenTexts[idx].text = "x" + TokenStock.ToString();
     }
-    
+    void Start()
+    {
+        Debug.Log("Adding listeners");
+        confirmBtn.onClick.AddListener(() => OnConfirmClicked() );
+        cancelBtn.onClick.AddListener(() => CancelledClicked() );
+    }
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     public override void OnNetworkSpawn()
     {
+        
+
         int cardCount = cardBoardTransform.childCount;
         networkCards = new NetworkCard[12];
 
