@@ -9,6 +9,7 @@ using Unity.VisualScripting;
 using Unity.VisualScripting.Antlr3.Runtime;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UI;
 
 public struct NetworkToken : INetworkSerializable
 {
@@ -67,11 +68,18 @@ public class CardManager : NetworkBehaviour
     public NetworkCard[] networkCards;
     [SerializeField] private Transform cardBoardTransform;
     [SerializeField] private Transform boardTokenTableTransform;
+    [SerializeField] public TMP_Text playerTurnText;
+    [SerializeField] public GameObject confirmMsgGo;
+    [SerializeField] public Button confirmBtn;
+    [SerializeField] public Button cancelBtn;
+        
 
     public NetworkToken[] boardTokens;
+    public NetworkToken[] inventoryTokens;
 
     public TokenUITable boardUI;
-    //public TokenUITable inventoryUI;
+    public TokenUITable inventoryUI;
+
     private static CardManager instance;
     public static CardManager Instance => instance;
 
@@ -81,11 +89,27 @@ public class CardManager : NetworkBehaviour
     {
         instance = this;
     }
+    void Start()
+    {
+        confirmBtn.onClick.AddListener(() => OnConfirmClicked() );
+        cancelBtn.onClick.AddListener(() => CancelledClicked() );
+    }
 
-
-    public void OnTokenClicked(GemStoneType type)
+    public void OnConfirmClicked()
+    {
+        for (int idx = 0; idx < inventoryTokens.Length; idx++)
+        {
+            inventoryUI.tokenTexts[idx].text = "x" + inventoryTokens[idx].TokenCount.ToString();
+        }
+        confirmMsgGo.SetActive(false);
+    }
+    public void CancelledClicked()
     {
         
+    }
+
+    public void OnTokenClicked(GemStoneType type)
+    {        
         int tokenCount = boardTokens[(int)type].TokenCount;
         
         TokensInHand[(int)type]++;
@@ -109,8 +133,14 @@ public class CardManager : NetworkBehaviour
             TokensInHand[(int)type]--;
             return;
         } 
+
+        
+        if (TokensInHand.Sum() > 1 && confirmMsgGo.activeSelf == false)
+            confirmMsgGo.SetActive(true);
         
         tokenCount--;
+        inventoryTokens[(int)type].TokenCount++;
+        
 
         boardTokens[(int)type].TokenCount = tokenCount;
         
@@ -301,6 +331,12 @@ public class CardManager : NetworkBehaviour
         }
         for (int idx = 0; idx < boardTokens.Length; idx++)
             boardTokens[idx].TokenCount = TokenStock;
+
+        inventoryTokens = new NetworkToken[6];
+            
+        for (int idx = 0; idx < boardTokens.Length; idx++)
+            inventoryTokens[idx].TokenCount = 0;
+
 
         for (int idx = 0; idx < boardUI.tokenTexts.Length; idx++)
             boardUI.tokenTexts[idx].text = "x" + TokenStock.ToString();
