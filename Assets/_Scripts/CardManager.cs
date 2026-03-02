@@ -66,9 +66,7 @@ public class CardManager : NetworkBehaviour
     [SerializeField] private Transform cardBoardTransform;
     [SerializeField] private Transform boardTokenTableTransform;
     [SerializeField] public TMP_Text playerTurnText;
-    [SerializeField] public GameObject confirmMsgGo;
-    [SerializeField] public Button confirmBtn;
-    [SerializeField] public Button cancelBtn;
+    [SerializeField] public ConfirmationMessageBehaviour confirmMsg;
         
     public NetworkToken[] boardTokens;
     public NetworkToken[] inventoryTokens;
@@ -86,17 +84,13 @@ public class CardManager : NetworkBehaviour
         instance = this;
     }
 
-    public void OnConfirmClicked()
+    public void CollectTokens()
     {
-        //if (IsServer)
-        //    return;
-
         Debug.Log("Clicking the button");
         for (int idx = 0; idx < inventoryTokens.Length; idx++)
         {
             inventoryUI.tokenTexts[idx].text = "x" + inventoryTokens[idx].TokenCount.ToString();
         }
-        confirmMsgGo.SetActive(false);
 
         
         for(int i = 0; i < TokensInHand.Length; i++)
@@ -104,9 +98,33 @@ public class CardManager : NetworkBehaviour
 
         ServerManager.Instance.NextTurnServerRpc();
     }
-    public void CancelledClicked()
+    public void PurchaseCard(GameObject go)
     {
+        CardBehaviour card = go.GetComponent<CardBehaviour>();
+
+        bool currency_met = 
+            (inventoryTokens[(int)GemStoneType.Diamond].TokenCount  >= card.DiamondCount ) &&
+            (inventoryTokens[(int)GemStoneType.Ruby].TokenCount     >= card.RubyCount    ) &&
+            (inventoryTokens[(int)GemStoneType.Saphire].TokenCount  >= card.SaphireCount ) &&
+            (inventoryTokens[(int)GemStoneType.Onyx].TokenCount     >= card.OnyxCount    ) &&
+            (inventoryTokens[(int)GemStoneType.Emerald].TokenCount  >= card.EmeraldCount );
+
+
+        Debug.Log("Card Costs - Diamond: " + card.DiamondCount + " - Ruby: " + card.RubyCount + " - Saphire: " + card.SaphireCount + " - Onyx: " + card.OnyxCount + " - Emerald: " + card.EmeraldCount);
         
+        Debug.Log("Inventory - Diamond: " + inventoryTokens[(int)GemStoneType.Diamond].TokenCount + " - Ruby: " + 
+        inventoryTokens[(int)GemStoneType.Ruby].TokenCount + " - Saphire: " + inventoryTokens[(int)GemStoneType.Saphire].TokenCount + 
+        " - Onyx: " + inventoryTokens[(int)GemStoneType.Onyx].TokenCount + " - Emerald: " + inventoryTokens[(int)GemStoneType.Emerald].TokenCount);
+
+        if (!currency_met)
+        {
+            // Eventually we'll have UI messages for this.
+            Debug.LogWarning("Not enough currency!");
+        }
+        else
+        {
+            Debug.Log("Curreny met, we can purchase this card");
+        }
     }
 
     public void OnTokenClicked(GemStoneType type)
@@ -139,8 +157,9 @@ public class CardManager : NetworkBehaviour
         } 
 
         
-        if (TokensInHand.Sum() > 1 && confirmMsgGo.activeSelf == false)
-            confirmMsgGo.SetActive(true);
+        if (TokensInHand.Sum() > 1 && confirmMsg.gameObject.activeSelf == false)
+            ConfirmationMessageBehaviour.Instance.ShowConfirmMsg(TurnAction.CollectTokens);
+            //confirmMsg.gameObject.SetActive(true);
         
         tokenCount--;
         inventoryTokens[(int)type].TokenCount++;
@@ -306,6 +325,7 @@ public class CardManager : NetworkBehaviour
             networkCards[i].saphireCount = gemCosts[2];
             networkCards[i].onyxCount = gemCosts[3];
             networkCards[i].emeraldCount = gemCosts[4]; 
+            networkCards[i].gemStoneType = randGemType;
 
             //networkCards[i].cardGO.SetCard(randGemType, prestige, gemCosts[0], gemCosts[1], gemCosts[2], gemCosts[3], gemCosts[4]);
             
@@ -317,12 +337,9 @@ public class CardManager : NetworkBehaviour
     [Rpc(SendTo.ClientsAndHost, InvokePermission = RpcInvokePermission.Everyone)]
     public void SyncBoardClientRpc(NetworkCard[] netCards, int TokenStock)
     {
-        //Debug.Log("Setting up board [Client = " + (IsClient || IsHost).ToString() + "]");
         for(int i = 0; i < netCards.Length; i++)
         {
             NetworkCard card = netCards[i];
-
-            //Debug.Log("Net ID: " + netid + ", P: " + card.presteigeCount + " " + card.diamondCount);
 
             networkCards[i].cardGO.SetCard(card.gemStoneType, 
                 card.presteigeCount, 
@@ -347,15 +364,16 @@ public class CardManager : NetworkBehaviour
     }
     void Start()
     {
-        Debug.Log("Adding listeners");
-        confirmBtn.onClick.AddListener(() => OnConfirmClicked() );
-        cancelBtn.onClick.AddListener(() => CancelledClicked() );
+        if (!ServerManager.Instance.IsExplicitServer)
+        {
+            ConfirmationMessageBehaviour.Instance.onCollectTokens += CollectTokens;            
+            ConfirmationMessageBehaviour.Instance.onPurchaseCard += PurchaseCard;
+        }
     }
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     public override void OnNetworkSpawn()
     {
-        
 
         int cardCount = cardBoardTransform.childCount;
         networkCards = new NetworkCard[12];

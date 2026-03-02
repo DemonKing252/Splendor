@@ -40,7 +40,7 @@ public class ServerManager : NetworkBehaviour
         // If the app runs as a Host but not a server *explicitly*
         if (!IsExplicitServer)
         {       
-            playerTurn.OnValueChanged += UpdatePlayerTurnStatus;            
+            playerTurn.OnValueChanged += UpdatePlayerTurnStatus;
             UpdatePlayerTurnStatus(0, 0);
         }        
 

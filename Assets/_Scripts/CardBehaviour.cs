@@ -18,6 +18,7 @@ public enum GemStoneType
 
 public class CardBehaviour : MonoBehaviour
 {
+    [SerializeField] private Button buttonBehaviour;
     [SerializeField] private TMP_Text presteigeText;
     [SerializeField] private Image cardSprite;
     [SerializeField] private GemStoneType gemStoneType;
@@ -28,12 +29,24 @@ public class CardBehaviour : MonoBehaviour
     [SerializeField] private int onyxCount = 0;
     [SerializeField] private int emeraldCount = 0;
 
+    public GemStoneType GemStoneType => gemStoneType;
+    public int PresteigeCount => presteigeCount;
+    public int DiamondCount => diamondCount;
+    public int RubyCount => rubyCount;
+    public int SaphireCount => saphireCount;
+    public int OnyxCount => onyxCount;
+    public int EmeraldCount => emeraldCount;
+
     public GameObject[] gems;
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    void Awake()
     {
-        
+        buttonBehaviour = GetComponent<Button>();
+        buttonBehaviour.onClick.AddListener(() =>
+        {
+            ConfirmationMessageBehaviour.Instance.ShowConfirmMsg(TurnAction.BuyCard, this.gameObject);
+        });
     }
 
     // Update is called once per frame
@@ -60,11 +73,18 @@ public class CardBehaviour : MonoBehaviour
         int[] _gemCounts =
         {
             diamondCount,
+            onyxCount,
+            rubyCount,
+            emeraldCount,
+            saphireCount
+        };
+        /*
+            diamondCount,
             rubyCount,
             saphireCount,
             onyxCount,
             emeraldCount
-        };
+        */
 
         int index = 0;
         foreach(int value in _gemCounts)
