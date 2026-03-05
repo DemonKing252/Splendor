@@ -58,6 +58,7 @@ public class CardBehaviour : MonoBehaviour
     public void SetCard(GemStoneType gemStoneType, int presteigeCount, 
     int diamondCount, int rubyCount, int saphireCount, int onyxCount, int emeraldCount)
     {
+        this.gemStoneType = gemStoneType;
         int gemStoneIndex = (int)gemStoneType;
         cardSprite.sprite = GameInstance.Instance.GemSprites[gemStoneIndex];
 

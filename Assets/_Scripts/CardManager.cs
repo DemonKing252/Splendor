@@ -70,9 +70,11 @@ public class CardManager : NetworkBehaviour
         
     public NetworkToken[] boardTokens;
     public NetworkToken[] inventoryTokens;
+    public NetworkToken[] permaDiscountTokens;
 
     public TokenUITable boardUI;
     public TokenUITable inventoryUI;
+    public TokenUITable permaDiscountUI;
 
     private static CardManager instance;
     public static CardManager Instance => instance;
@@ -103,11 +105,11 @@ public class CardManager : NetworkBehaviour
         CardBehaviour card = go.GetComponent<CardBehaviour>();
 
         bool currency_met = 
-            (inventoryTokens[(int)GemStoneType.Diamond].TokenCount  >= card.DiamondCount ) &&
-            (inventoryTokens[(int)GemStoneType.Ruby].TokenCount     >= card.RubyCount    ) &&
-            (inventoryTokens[(int)GemStoneType.Saphire].TokenCount  >= card.SaphireCount ) &&
-            (inventoryTokens[(int)GemStoneType.Onyx].TokenCount     >= card.OnyxCount    ) &&
-            (inventoryTokens[(int)GemStoneType.Emerald].TokenCount  >= card.EmeraldCount );
+            (inventoryTokens[(int)GemStoneType.Diamond].TokenCount + permaDiscountTokens[(int)GemStoneType.Diamond].TokenCount >= card.DiamondCount ) &&
+            (inventoryTokens[(int)GemStoneType.Ruby].TokenCount + permaDiscountTokens[(int)GemStoneType.Ruby].TokenCount    >= card.RubyCount    ) &&
+            (inventoryTokens[(int)GemStoneType.Saphire].TokenCount + permaDiscountTokens[(int)GemStoneType.Saphire].TokenCount >= card.SaphireCount ) &&
+            (inventoryTokens[(int)GemStoneType.Onyx].TokenCount + permaDiscountTokens[(int)GemStoneType.Onyx].TokenCount    >= card.OnyxCount    ) &&
+            (inventoryTokens[(int)GemStoneType.Emerald].TokenCount + permaDiscountTokens[(int)GemStoneType.Emerald].TokenCount >= card.EmeraldCount );
 
 
         Debug.Log("Card Costs - Diamond: " + card.DiamondCount + " - Ruby: " + card.RubyCount + " - Saphire: " + card.SaphireCount + " - Onyx: " + card.OnyxCount + " - Emerald: " + card.EmeraldCount);
@@ -124,6 +126,20 @@ public class CardManager : NetworkBehaviour
         else
         {
             Debug.Log("Curreny met, we can purchase this card");
+            permaDiscountTokens[(int)card.GemStoneType].TokenCount++;
+
+            inventoryTokens[(int)GemStoneType.Diamond].TokenCount -= Mathf.Max(card.DiamondCount - permaDiscountTokens[(int)GemStoneType.Diamond].TokenCount, 0);
+            inventoryTokens[(int)GemStoneType.Ruby].TokenCount -= Mathf.Max(card.RubyCount - permaDiscountTokens[(int)GemStoneType.Ruby].TokenCount, 0);
+            inventoryTokens[(int)GemStoneType.Saphire].TokenCount -= Mathf.Max(card.SaphireCount - permaDiscountTokens[(int)GemStoneType.Saphire].TokenCount, 0);
+            inventoryTokens[(int)GemStoneType.Onyx].TokenCount -= Mathf.Max(card.OnyxCount - permaDiscountTokens[(int)GemStoneType.Onyx].TokenCount, 0);
+            inventoryTokens[(int)GemStoneType.Emerald].TokenCount -= Mathf.Max(card.EmeraldCount - permaDiscountTokens[(int)GemStoneType.Emerald].TokenCount, 0);
+
+            for(int idx = 0; idx < inventoryUI.tokenTexts.Length; idx++)
+                inventoryUI.tokenTexts[idx].text = "x" + inventoryTokens[idx].TokenCount;
+
+            permaDiscountUI.tokenTexts[(int)card.GemStoneType].text = "+" + permaDiscountTokens[(int)card.GemStoneType].TokenCount;
+            
+            ServerManager.Instance.NextTurnServerRpc();
         }
     }
 
@@ -387,6 +403,8 @@ public class CardManager : NetworkBehaviour
         
         // Server Sets up Board -> Client recieves the board map & sets up network Ids -> S
         boardTokens = new NetworkToken[6];
+        permaDiscountTokens = new NetworkToken[6];
+
         for(int idx = 0; idx < boardTokens.Length; idx++)
         {
             boardTokens[idx].TokenCount = 0;
@@ -410,6 +428,10 @@ public class CardManager : NetworkBehaviour
 
             for(int i = 0; i < boardTokens.Length; i++)
                 boardTokens[i].token.onTokenClicked += OnTokenClicked;
+
+            for(int i = 0; i < permaDiscountTokens.Length; i++)
+                permaDiscountTokens[i].TokenCount = 0;
+
 
             Debug.Log("Starting Client/Host");
         }
