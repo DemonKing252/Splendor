@@ -30,7 +30,7 @@ public class TokenUITable
 
 public struct NetworkCard : INetworkSerializable
 {
-    public ulong NetworkID;
+    public ulong CardIndex;
     public CardBehaviour cardGO;
     public GemStoneType gemStoneType;
     /*
@@ -56,7 +56,7 @@ public struct NetworkCard : INetworkSerializable
         serializer.SerializeValue(ref saphireCount);
         serializer.SerializeValue(ref onyxCount);
         serializer.SerializeValue(ref emeraldCount);
-        serializer.SerializeValue(ref NetworkID);
+        serializer.SerializeValue(ref CardIndex);
     }
 }
 
@@ -140,6 +140,8 @@ public class CardManager : NetworkBehaviour
             permaDiscountUI.tokenTexts[(int)card.GemStoneType].text = "+" + permaDiscountTokens[(int)card.GemStoneType].TokenCount;
             
             ServerManager.Instance.NextTurnServerRpc();
+
+            ServerManager.Instance.RescrambleCardServerRpc(card.CardIndex);
         }
     }
 
@@ -237,6 +239,80 @@ public class CardManager : NetworkBehaviour
         return str;
     }
 
+    public void ScrambleCard(ref NetworkCard networkCard)
+    {
+        int prestige = 0;
+
+        int[] gemCosts = new int[5]
+        {
+            0, 0, 0, 0, 0
+        };
+        
+        Action<int, int, int> RandomizeGemCosts = (count, minInclusive, maxInclusive) =>
+        {
+            int[] randIndexes = RandomUniqueIndexes(count, 4);
+            
+            for(int idx = 0; idx < count; idx++)
+                gemCosts[randIndexes[idx]] = UnityEngine.Random.Range(minInclusive, maxInclusive + 1);
+        };
+
+        float prestiegeRand = UnityEngine.Random.Range(0f, 100f);
+        if (prestiegeRand <= 40f)   // 0 Prestige Point.
+        {
+            prestige = 0;
+            int gemPrefabCount = UnityEngine.Random.Range(1, 3); // 1 or 2
+            switch(gemPrefabCount)
+            {
+                case 1: RandomizeGemCosts(1, 2, 3); break;
+                case 2: RandomizeGemCosts(2, 1, 2); break;
+            }
+        }
+        else if (prestiegeRand <= 70f) // 1 Prestige Point.
+        {
+            prestige = 1;
+            int gemPrefabCount = UnityEngine.Random.Range(1, 4); // 1/2/3
+        
+            switch(gemPrefabCount)
+            {
+                case 1: RandomizeGemCosts(1, 3, 4); break;
+                case 2: RandomizeGemCosts(2, 2, 3); break;
+                case 3: RandomizeGemCosts(3, 1, 2); break;
+            }
+        }
+        else // 2 Prestige Points.
+        {
+            prestige = 2;
+            int gemPrefabCount = UnityEngine.Random.Range(1, 5); // 1/2/3/4
+            switch(gemPrefabCount)
+            {
+                case 1: RandomizeGemCosts(1, 6, 7); break;
+                case 2: RandomizeGemCosts(2, 4, 5); break;
+                case 3: RandomizeGemCosts(3, 3, 4); break;
+                case 4: RandomizeGemCosts(4, 2, 3); break;
+            }
+        }
+        //Debug.Log(i + " - Gem Stone Values: " + IntArrayToList(gemCosts));
+        
+        GemStoneType randGemType = (GemStoneType)UnityEngine.Random.Range(0, 5); 
+        /*
+        diamondCount,
+        rubyCount,
+        saphireCount,
+        onyxCount,
+        emeraldCount
+        */
+        networkCard.presteigeCount = prestige;
+        networkCard.diamondCount = gemCosts[0];
+        networkCard.rubyCount = gemCosts[1];
+        networkCard.saphireCount = gemCosts[2];
+        networkCard.onyxCount = gemCosts[3];
+        networkCard.emeraldCount = gemCosts[4]; 
+        networkCard.gemStoneType = randGemType;
+        
+        for(int idx = 0; idx < gemCosts.Length; idx++)
+            gemCosts[idx] = 0;
+    }
+
     public void ScrambleBoard(int cardCount)
     {
         /*
@@ -259,104 +335,40 @@ public class CardManager : NetworkBehaviour
             If 4 -> four gem types costing 2-3
         */
 
-        int prestige = 0;
         
-        /*
-            diamondCount,
-            rubyCount,
-            saphireCount,
-            onyxCount,
-            emeraldCount
-        */
 
-        int[] gemCosts = new int[5]
+        for (int idx = 0; idx < cardCount; idx++)
         {
-            0, 0, 0, 0, 0
-        };
-        
-        Action<int, int, int> RandomizeGemCosts = (count, minInclusive, maxInclusive) =>
-        {
-            int[] randIndexes = RandomUniqueIndexes(count, 4);
-            
-            for(int idx = 0; idx < count; idx++)
-                gemCosts[randIndexes[idx]] = UnityEngine.Random.Range(minInclusive, maxInclusive + 1);
-        };
-
-        for (int i = 0; i < cardCount; i++)
-        {
-            
-            float prestiegeRand = UnityEngine.Random.Range(0f, 100f);
-
-            if (prestiegeRand <= 40f)   // 0 Prestige Point.
-            {
-                prestige = 0;
-                int gemPrefabCount = UnityEngine.Random.Range(1, 3); // 1 or 2
-
-                switch(gemPrefabCount)
-                {
-                    case 1: RandomizeGemCosts(1, 2, 3); break;
-                    case 2: RandomizeGemCosts(2, 1, 2); break;
-                }
-            }
-            else if (prestiegeRand <= 70f) // 1 Prestige Point.
-            {
-                prestige = 1;
-                int gemPrefabCount = UnityEngine.Random.Range(1, 4); // 1/2/3
-            
-                switch(gemPrefabCount)
-                {
-                    case 1: RandomizeGemCosts(1, 3, 4); break;
-                    case 2: RandomizeGemCosts(2, 2, 3); break;
-                    case 3: RandomizeGemCosts(3, 1, 2); break;
-                }
-            }
-            else // 2 Prestige Points.
-            {
-                prestige = 2;
-                int gemPrefabCount = UnityEngine.Random.Range(1, 5); // 1/2/3/4
-
-                switch(gemPrefabCount)
-                {
-                    case 1: RandomizeGemCosts(1, 6, 7); break;
-                    case 2: RandomizeGemCosts(2, 4, 5); break;
-                    case 3: RandomizeGemCosts(3, 3, 4); break;
-                    case 4: RandomizeGemCosts(4, 2, 3); break;
-                }
-            }
-
-            //Debug.Log(i + " - Gem Stone Values: " + IntArrayToList(gemCosts));
-            
-            GemStoneType randGemType = (GemStoneType)UnityEngine.Random.Range(0, 5); 
-
-            /*
-            diamondCount,
-            rubyCount,
-            saphireCount,
-            onyxCount,
-            emeraldCount
-            */
-            networkCards[i].presteigeCount = prestige;
-            networkCards[i].diamondCount = gemCosts[0];
-            networkCards[i].rubyCount = gemCosts[1];
-            networkCards[i].saphireCount = gemCosts[2];
-            networkCards[i].onyxCount = gemCosts[3];
-            networkCards[i].emeraldCount = gemCosts[4]; 
-            networkCards[i].gemStoneType = randGemType;
-
-            //networkCards[i].cardGO.SetCard(randGemType, prestige, gemCosts[0], gemCosts[1], gemCosts[2], gemCosts[3], gemCosts[4]);
-            
-            for(int idx = 0; idx < gemCosts.Length; idx++)
-                gemCosts[idx] = 0;
+            networkCards[idx].CardIndex = (ulong)idx;
+            ScrambleCard(ref networkCards[idx]);
         }
     }
-
     [Rpc(SendTo.ClientsAndHost, InvokePermission = RpcInvokePermission.Everyone)]
-    public void SyncBoardClientRpc(NetworkCard[] netCards, int TokenStock)
+    public void SyncBoardClientRpc(NetworkCard[] netCards)
     {
         for(int i = 0; i < netCards.Length; i++)
         {
             NetworkCard card = netCards[i];
 
+            networkCards[i].cardGO.SetCard(card.gemStoneType, 
+                card.presteigeCount, 
+                card.diamondCount, 
+                card.rubyCount, 
+                card.saphireCount, 
+                card.onyxCount, 
+                card.emeraldCount
+            );
+        }
+    }
+
+    [Rpc(SendTo.ClientsAndHost, InvokePermission = RpcInvokePermission.Everyone)]
+    public void SetupBoardClientRpc(NetworkCard[] netCards, int TokenStock)
+    {
+        for(int i = 0; i < netCards.Length; i++)
+        {
+            NetworkCard card = netCards[i];
+
+            networkCards[i].CardIndex = (ulong)i;
             networkCards[i].cardGO.SetCard(card.gemStoneType, 
                 card.presteigeCount, 
                 card.diamondCount, 

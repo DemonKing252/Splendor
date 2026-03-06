@@ -36,6 +36,7 @@ public class CardBehaviour : MonoBehaviour
     public int SaphireCount => saphireCount;
     public int OnyxCount => onyxCount;
     public int EmeraldCount => emeraldCount;
+    public ulong CardIndex = 0;
 
     public GameObject[] gems;
 

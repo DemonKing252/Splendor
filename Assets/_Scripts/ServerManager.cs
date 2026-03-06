@@ -60,6 +60,17 @@ public class ServerManager : NetworkBehaviour
             Debug.Log("Exception on Server: " + e.Message);
         }
     }
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+    public void RescrambleCardServerRpc(ulong cardIndex)
+    {
+        // Scramble card at Network Object ID (cardIndex)
+        CardManager.Instance.ScrambleCard(ref CardManager.Instance.networkCards[(int)cardIndex]);
+
+        // Sync cards across network
+        CardManager.Instance.SyncBoardClientRpc(CardManager.Instance.networkCards);
+    }
+
+
     public void UpdatePlayerTurnStatus(ulong oldValue, ulong newValue)
     {
         Debug.Log("Updating text: " + newValue);
@@ -81,7 +92,7 @@ public class ServerManager : NetworkBehaviour
         Debug.Log("Client joined the server at ID: " + clientID);
         
         clientIDs.Add(clientID);
-        CardManager.Instance.SyncBoardClientRpc(CardManager.Instance.networkCards, 4);
+        CardManager.Instance.SetupBoardClientRpc(CardManager.Instance.networkCards, 4);
         UpdatePlayerTurnStatus(0, 0);
 
     }
