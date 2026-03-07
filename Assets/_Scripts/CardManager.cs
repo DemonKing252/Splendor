@@ -28,10 +28,9 @@ public class TokenUITable
     public TMP_Text[] tokenTexts;
 }
 
-public struct NetworkCard : INetworkSerializable
+public struct NetworkCard : INetworkSerializable, System.IEquatable<NetworkCard>
 {
     public ulong CardIndex;
-    public CardBehaviour cardGO;
     public GemStoneType gemStoneType;
     /*
         diamondCount,
@@ -46,6 +45,14 @@ public struct NetworkCard : INetworkSerializable
     public int saphireCount;
     public int onyxCount;
     public int emeraldCount;
+
+    public bool Equals(NetworkCard other)
+        => gemStoneType == other.gemStoneType &&
+           presteigeCount == other.presteigeCount &&
+           diamondCount == other.diamondCount &&
+           saphireCount == other.saphireCount &&
+           onyxCount == other.onyxCount &&
+           emeraldCount == other.emeraldCount;
 
     public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
     {
@@ -62,7 +69,6 @@ public struct NetworkCard : INetworkSerializable
 
 public class CardManager : NetworkBehaviour
 {
-    public NetworkCard[] networkCards;
     [SerializeField] private Transform cardBoardTransform;
     [SerializeField] private Transform boardTokenTableTransform;
     [SerializeField] public TMP_Text playerTurnText;
@@ -78,6 +84,12 @@ public class CardManager : NetworkBehaviour
 
     private static CardManager instance;
     public static CardManager Instance => instance;
+
+    
+    //public NetworkCard[] networkCards;
+    public NetworkList<NetworkCard> networkCards = new NetworkList<NetworkCard>();
+    
+    public CardBehaviour[] cardGOs;
 
     public int[] TokensInHand;
 
@@ -140,7 +152,6 @@ public class CardManager : NetworkBehaviour
             permaDiscountUI.tokenTexts[(int)card.GemStoneType].text = "+" + permaDiscountTokens[(int)card.GemStoneType].TokenCount;
             
             ServerManager.Instance.NextTurnServerRpc();
-
             ServerManager.Instance.RescrambleCardServerRpc(card.CardIndex);
         }
     }
@@ -239,7 +250,7 @@ public class CardManager : NetworkBehaviour
         return str;
     }
 
-    public void ScrambleCard(ref NetworkCard networkCard)
+    public void ScrambleCard(ulong cardIndex)
     {
         int prestige = 0;
 
@@ -301,13 +312,17 @@ public class CardManager : NetworkBehaviour
         onyxCount,
         emeraldCount
         */
-        networkCard.presteigeCount = prestige;
-        networkCard.diamondCount = gemCosts[0];
-        networkCard.rubyCount = gemCosts[1];
-        networkCard.saphireCount = gemCosts[2];
-        networkCard.onyxCount = gemCosts[3];
-        networkCard.emeraldCount = gemCosts[4]; 
-        networkCard.gemStoneType = randGemType;
+        NetworkCard netCard = networkCards[(int)cardIndex];
+
+        netCard.presteigeCount = prestige;
+        netCard.diamondCount = gemCosts[0];
+        netCard.rubyCount = gemCosts[1];
+        netCard.saphireCount = gemCosts[2];
+        netCard.onyxCount = gemCosts[3];
+        netCard.emeraldCount = gemCosts[4]; 
+        netCard.gemStoneType = randGemType;
+
+        networkCards[(int)cardIndex] = netCard;
         
         for(int idx = 0; idx < gemCosts.Length; idx++)
             gemCosts[idx] = 0;
@@ -339,18 +354,36 @@ public class CardManager : NetworkBehaviour
 
         for (int idx = 0; idx < cardCount; idx++)
         {
-            networkCards[idx].CardIndex = (ulong)idx;
-            ScrambleCard(ref networkCards[idx]);
+            //networkCards.Value[idx].CardIndex = (ulong)idx;
+            
+            ScrambleCard((ulong)idx);
         }
-    }
-    [Rpc(SendTo.ClientsAndHost, InvokePermission = RpcInvokePermission.Everyone)]
-    public void SyncBoardClientRpc(NetworkCard[] netCards)
-    {
-        for(int i = 0; i < netCards.Length; i++)
-        {
-            NetworkCard card = netCards[i];
 
-            networkCards[i].cardGO.SetCard(card.gemStoneType, 
+    }
+    public void OnNetworkCardChanged(NetworkListEvent<NetworkCard> change)
+    {    
+        NetworkCard card = change.Value;
+        int cardIndex = change.Index;
+    
+        cardGOs[cardIndex].SetCard(card.gemStoneType, 
+            card.presteigeCount, 
+            card.diamondCount, 
+            card.rubyCount, 
+            card.saphireCount, 
+            card.onyxCount, 
+            card.emeraldCount
+        );
+    }
+
+    [Rpc(SendTo.ClientsAndHost, InvokePermission = RpcInvokePermission.Everyone)]
+    public void SetupBoardClientRpc(int TokenStock)
+    {
+        for(int i = 0; i < networkCards.Count; i++)
+        {
+            NetworkCard card = networkCards[i];
+            Debug.Log("Netork Card - type: " + card.gemStoneType + " - " + card.presteigeCount + " - " + card.diamondCount);
+
+            cardGOs[i].SetCard(card.gemStoneType, 
                 card.presteigeCount, 
                 card.diamondCount, 
                 card.rubyCount, 
@@ -358,25 +391,8 @@ public class CardManager : NetworkBehaviour
                 card.onyxCount, 
                 card.emeraldCount
             );
-        }
-    }
 
-    [Rpc(SendTo.ClientsAndHost, InvokePermission = RpcInvokePermission.Everyone)]
-    public void SetupBoardClientRpc(NetworkCard[] netCards, int TokenStock)
-    {
-        for(int i = 0; i < netCards.Length; i++)
-        {
-            NetworkCard card = netCards[i];
-
-            networkCards[i].CardIndex = (ulong)i;
-            networkCards[i].cardGO.SetCard(card.gemStoneType, 
-                card.presteigeCount, 
-                card.diamondCount, 
-                card.rubyCount, 
-                card.saphireCount, 
-                card.onyxCount, 
-                card.emeraldCount
-            );
+            networkCards[i] = card;
         }
         for (int idx = 0; idx < boardTokens.Length; idx++)
             boardTokens[idx].TokenCount = TokenStock;
@@ -404,7 +420,6 @@ public class CardManager : NetworkBehaviour
     {
 
         int cardCount = cardBoardTransform.childCount;
-        networkCards = new NetworkCard[12];
 
         if (cardCount != 12)
         {
@@ -416,6 +431,7 @@ public class CardManager : NetworkBehaviour
         // Server Sets up Board -> Client recieves the board map & sets up network Ids -> S
         boardTokens = new NetworkToken[6];
         permaDiscountTokens = new NetworkToken[6];
+        cardGOs = new CardBehaviour[cardCount];
 
         for(int idx = 0; idx < boardTokens.Length; idx++)
         {
@@ -426,14 +442,24 @@ public class CardManager : NetworkBehaviour
 
         if (IsServer)
         {
+            for (int i = 0; i < cardCount; i++)
+            {
+                networkCards.Add(new NetworkCard());
+            }
+
             ScrambleBoard(cardCount);
             Debug.Log("Starting Server...");            
         }
         // Client/Host leave the board blank until the server authorizes the scramble (check ServerRpc)
         if (IsHost || IsClient)
-        {        
+        {    
+            networkCards.OnListChanged += OnNetworkCardChanged;
+
             for(int i = 0; i < cardCount; i++)
-                networkCards[i].cardGO = cardBoardTransform.GetChild(i).GetComponent<CardBehaviour>();
+            {
+                cardGOs[i] = cardBoardTransform.GetChild(i).GetComponent<CardBehaviour>();
+                cardGOs[i].CardIndex = (ulong)i;
+            }
 
             for (int i = 0; i < boardTokenTableTransform.childCount; i++)             
                 boardTokens[i].token = boardTokenTableTransform.GetChild(i).GetComponent<BoardTokenBehaviour>();

@@ -8005,6 +8005,7 @@ MonoBehaviour:
     - {fileID: 558337123}
     - {fileID: 510959559}
     - {fileID: 313266635}
+  cardGOs: []
   TokensInHand: 
 --- !u!4 &1270384322
 Transform:
@@ -11771,7 +11772,7 @@ MonoBehaviour:
   m_DisconnectTimeoutMS: 30000
   ConnectionData:
     Address: 127.0.0.1
-    Port: 5886
+    Port: 5565
     ServerListenAddress: 127.0.0.1
     ClientBindPort: 0
   DebugSimulator:

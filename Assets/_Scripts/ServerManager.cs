@@ -64,10 +64,10 @@ public class ServerManager : NetworkBehaviour
     public void RescrambleCardServerRpc(ulong cardIndex)
     {
         // Scramble card at Network Object ID (cardIndex)
-        CardManager.Instance.ScrambleCard(ref CardManager.Instance.networkCards[(int)cardIndex]);
+        CardManager.Instance.ScrambleCard(cardIndex);
 
         // Sync cards across network
-        CardManager.Instance.SyncBoardClientRpc(CardManager.Instance.networkCards);
+        //CardManager.Instance.SyncBoardClientRpc(CardManager.Instance.networkCards);
     }
 
 
@@ -92,7 +92,7 @@ public class ServerManager : NetworkBehaviour
         Debug.Log("Client joined the server at ID: " + clientID);
         
         clientIDs.Add(clientID);
-        CardManager.Instance.SetupBoardClientRpc(CardManager.Instance.networkCards, 4);
+        CardManager.Instance.SetupBoardClientRpc(4);
         UpdatePlayerTurnStatus(0, 0);
 
     }
