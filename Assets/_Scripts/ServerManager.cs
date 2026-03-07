@@ -92,7 +92,7 @@ public class ServerManager : NetworkBehaviour
         Debug.Log("Client joined the server at ID: " + clientID);
         
         clientIDs.Add(clientID);
-        CardManager.Instance.SetupBoardClientRpc(4);
+        CardManager.Instance.SetupBoardClientRpc();
         UpdatePlayerTurnStatus(0, 0);
 
     }

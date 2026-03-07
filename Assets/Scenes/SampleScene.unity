@@ -7981,6 +7981,8 @@ MonoBehaviour:
   boardTokenTableTransform: {fileID: 1862011850}
   playerTurnText: {fileID: 1332448860}
   confirmMsg: {fileID: 1545979291}
+  boardTokenBehaviours: []
+  permaDiscountTokenBehaviours: []
   boardUI:
     tokenTexts:
     - {fileID: 289541327}
@@ -11772,7 +11774,7 @@ MonoBehaviour:
   m_DisconnectTimeoutMS: 30000
   ConnectionData:
     Address: 127.0.0.1
-    Port: 5565
+    Port: 5491
     ServerListenAddress: 127.0.0.1
     ClientBindPort: 0
   DebugSimulator:
