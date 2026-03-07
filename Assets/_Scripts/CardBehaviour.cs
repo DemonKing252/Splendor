@@ -46,7 +46,7 @@ public class CardBehaviour : MonoBehaviour
         buttonBehaviour = GetComponent<Button>();
         buttonBehaviour.onClick.AddListener(() =>
         {
-            ConfirmationMessageBehaviour.Instance.ShowConfirmMsg(TurnAction.BuyCard, this.gameObject);
+            TokenUIManager.Instance.ShowConfirmUI(TurnAction.Buy_OR_Reserve, this.gameObject);
         });
     }
 

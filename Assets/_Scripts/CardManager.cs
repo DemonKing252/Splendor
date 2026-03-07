@@ -83,7 +83,6 @@ public class CardManager : NetworkBehaviour
     [SerializeField] private Transform cardBoardTransform;
     [SerializeField] private Transform boardTokenTableTransform;
     [SerializeField] public TMP_Text playerTurnText;
-    [SerializeField] public ConfirmationMessageBehaviour confirmMsg;
 
       
     //public NetworkToken[] networkBoardTokens;
@@ -147,8 +146,9 @@ public class CardManager : NetworkBehaviour
 
         if (!currency_met)
         {
-            // Eventually we'll have UI messages for this.
-            Debug.LogWarning("Not enough currency!");
+            // Eventually we'll have UI messages for this. 
+            Debug.Log("Not enough currency.");
+            return;
         }
         else
         {
@@ -176,7 +176,6 @@ public class CardManager : NetworkBehaviour
         if (!ServerManager.Instance.IsMyTurn)
             return;
 
-
         int tokenCount = networkBoardTokens[(int)type].TokenCount;
         
         TokensInHand[(int)type]++;
@@ -202,8 +201,8 @@ public class CardManager : NetworkBehaviour
         } 
 
         
-        if (TokensInHand.Sum() > 1 && confirmMsg.gameObject.activeSelf == false)
-            ConfirmationMessageBehaviour.Instance.ShowConfirmMsg(TurnAction.CollectTokens);
+        if (TokensInHand.Sum() > 1 && TokenUIManager.Instance.TurnAction == TurnAction.Hidden)
+            TokenUIManager.Instance.ShowConfirmUI(TurnAction.Collect_Token);
             //confirmMsg.gameObject.SetActive(true);
         
         tokenCount--;
@@ -437,8 +436,8 @@ public class CardManager : NetworkBehaviour
     {
         if (!ServerManager.Instance.IsExplicitServer)
         {
-            ConfirmationMessageBehaviour.Instance.onCollectTokens += CollectTokens;            
-            ConfirmationMessageBehaviour.Instance.onPurchaseCard += PurchaseCard;
+            //TokenUIManager.Instance.onCollectTokens += CollectTokens;            
+            //TokenUIManager.Instance.onPurchaseCard += PurchaseCard;
         }
     }
 
