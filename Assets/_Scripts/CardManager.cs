@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using NUnit.Framework;
 using NUnit.Framework.Constraints;
 using TMPro;
 using Unity.Netcode;
 using Unity.VisualScripting;
 using Unity.VisualScripting.Antlr3.Runtime;
+using Unity.VisualScripting.Antlr3.Runtime.Collections;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UI;
@@ -155,19 +157,35 @@ public class CardManager : NetworkBehaviour
             Debug.Log("Curreny met, we can purchase this card");
             permaDiscountTokens[(int)card.GemStoneType].TokenCount++;
 
-            inventoryTokens[(int)GemStoneType.Diamond].TokenCount -= Mathf.Max(card.DiamondCount - permaDiscountTokens[(int)GemStoneType.Diamond].TokenCount, 0);
-            inventoryTokens[(int)GemStoneType.Ruby].TokenCount -= Mathf.Max(card.RubyCount - permaDiscountTokens[(int)GemStoneType.Ruby].TokenCount, 0);
-            inventoryTokens[(int)GemStoneType.Saphire].TokenCount -= Mathf.Max(card.SaphireCount - permaDiscountTokens[(int)GemStoneType.Saphire].TokenCount, 0);
-            inventoryTokens[(int)GemStoneType.Onyx].TokenCount -= Mathf.Max(card.OnyxCount - permaDiscountTokens[(int)GemStoneType.Onyx].TokenCount, 0);
-            inventoryTokens[(int)GemStoneType.Emerald].TokenCount -= Mathf.Max(card.EmeraldCount - permaDiscountTokens[(int)GemStoneType.Emerald].TokenCount, 0);
+            int diamondDeduct = Mathf.Max(card.DiamondCount - permaDiscountTokens[(int)GemStoneType.Diamond].TokenCount, 0);
+            int rubyDeduct    = Mathf.Max(card.RubyCount - permaDiscountTokens[(int)GemStoneType.Ruby].TokenCount, 0);
+            int saphireDeduct = Mathf.Max(card.SaphireCount - permaDiscountTokens[(int)GemStoneType.Saphire].TokenCount, 0);
+            int onyxDeduct    = Mathf.Max(card.OnyxCount - permaDiscountTokens[(int)GemStoneType.Onyx].TokenCount, 0);
+            int emeraldDeduct = Mathf.Max(card.EmeraldCount - permaDiscountTokens[(int)GemStoneType.Emerald].TokenCount, 0);
+
+            inventoryTokens[(int)GemStoneType.Diamond].TokenCount -= diamondDeduct;
+            inventoryTokens[(int)GemStoneType.Ruby].TokenCount    -= rubyDeduct;
+            inventoryTokens[(int)GemStoneType.Saphire].TokenCount -= saphireDeduct;
+            inventoryTokens[(int)GemStoneType.Onyx].TokenCount    -= onyxDeduct;
+            inventoryTokens[(int)GemStoneType.Emerald].TokenCount -= emeraldDeduct;
 
             for(int idx = 0; idx < inventoryUI.tokenTexts.Length; idx++)
                 inventoryUI.tokenTexts[idx].text = "x" + inventoryTokens[idx].TokenCount;
 
             permaDiscountUI.tokenTexts[(int)card.GemStoneType].text = "+" + permaDiscountTokens[(int)card.GemStoneType].TokenCount;
             
+            NetworkToken[] networkTokens = 
+            {
+               new NetworkToken{TokenCount=diamondDeduct},
+               new NetworkToken{TokenCount=rubyDeduct},
+               new NetworkToken{TokenCount=saphireDeduct},
+               new NetworkToken{TokenCount=onyxDeduct},
+               new NetworkToken{TokenCount=emeraldDeduct},
+            };
+            ReplenishBoardTokenStackServerRpc(networkTokens);
             ServerManager.Instance.NextTurnServerRpc();
             ServerManager.Instance.RescrambleCardServerRpc(card.CardIndex);
+            
         }
     }
 
@@ -224,6 +242,22 @@ public class CardManager : NetworkBehaviour
         netToken.TokenCount = value;
         networkBoardTokens[tokenIndex] = netToken;
     }
+
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+    public void ReplenishBoardTokenStackServerRpc(NetworkToken[] networkTokens)
+    {
+        for(int idx = 0; idx < networkTokens.Count(); idx++)
+        {
+            var stack = networkBoardTokens[idx];
+            var deduct = networkTokens[idx];
+
+            int tokenCount = stack.TokenCount + deduct.TokenCount;
+            var newStack = new NetworkToken{TokenCount=tokenCount};
+
+            networkBoardTokens[idx] = newStack;
+        }
+    }
+
     public void OnTokenValueChanged(NetworkListEvent<NetworkToken> change)
     {
         var index = change.Index;
@@ -232,18 +266,6 @@ public class CardManager : NetworkBehaviour
         Debug.Log("New token count client after: " + netToken.ToString());
         boardUI.tokenTexts[index].text = "x" + netToken.TokenCount.ToString();
     }
-
-    //[Rpc(SendTo.ClientsAndHost, InvokePermission = RpcInvokePermission.Everyone)]
-    //public void UpdateBoardTokenNetworkClientRpc(NetworkToken[] netTokens)
-    //{
-    //    for (int idx = 0; idx < netTokens.Length; idx++)
-    //    {
-    //        //Debug.Log("Updating Token count to be: " + netTokens[idx].TokenCount.ToString());
-    //        networkBoardTokens[idx].TokenCount = netTokens[idx].TokenCount;
-    //        boardUI.tokenTexts[idx].text = "x" + netTokens[idx].TokenCount.ToString();
-    //    }
-    //}
-
 
     public int[] RandomUniqueIndexes(int count, int maxInclusive)
     {
@@ -294,8 +316,8 @@ public class CardManager : NetworkBehaviour
                 gemCosts[randIndexes[idx]] = UnityEngine.Random.Range(minInclusive, maxInclusive + 1);
         };
 
-        float prestiegeRand = UnityEngine.Random.Range(0f, 100f);
-        if (prestiegeRand <= 40f)   // 0 Prestige Point.
+        //float prestiegeRand = UnityEngine.Random.Range(0f, 100f);
+        if (cardIndex >= 0 && cardIndex <= 3)   // 0 Prestige Point (60% chance).
         {
             prestige = 0;
             int gemPrefabCount = UnityEngine.Random.Range(1, 3); // 1 or 2
@@ -305,7 +327,7 @@ public class CardManager : NetworkBehaviour
                 case 2: RandomizeGemCosts(2, 1, 2); break;
             }
         }
-        else if (prestiegeRand <= 70f) // 1 Prestige Point.
+        else if (cardIndex >= 4 && cardIndex <= 7) // 1 Prestige Point (20% chance).
         {
             prestige = 1;
             int gemPrefabCount = UnityEngine.Random.Range(1, 4); // 1/2/3
@@ -317,10 +339,10 @@ public class CardManager : NetworkBehaviour
                 case 3: RandomizeGemCosts(3, 1, 2); break;
             }
         }
-        else // 2 Prestige Points.
+        else // 2 Prestige Points (20% chance).
         {
             prestige = 2;
-            int gemPrefabCount = UnityEngine.Random.Range(1, 5); // 1/2/3/4
+            int gemPrefabCount = UnityEngine.Random.Range(1, 5); 
             switch(gemPrefabCount)
             {
                 case 1: RandomizeGemCosts(1, 6, 7); break;
