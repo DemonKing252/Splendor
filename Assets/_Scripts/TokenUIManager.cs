@@ -51,6 +51,11 @@ public class TokenUIManager : MonoBehaviour
             CardManager.Instance.PurchaseCard(activeCardGO); 
             HideConfirmUI();
         });
+        reserveBtn.onClick.AddListener(() =>
+        {
+            CardManager.Instance.ReserveCard(activeCardGO);
+            HideConfirmUI();
+        });
         cancelBtn.onClick.AddListener(() => 
             HideConfirmUI() 
         );

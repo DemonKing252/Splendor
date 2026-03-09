@@ -3,8 +3,9 @@ using UnityEngine;
 using UnityEngine.UI;
 
 using Unity.Netcode;
+using System;
 
-[System.Serializable]
+[Serializable]
 public enum GemStoneType
 {
     Diamond,
@@ -14,6 +15,13 @@ public enum GemStoneType
     Emerald,
     WildCard,
     Count
+}
+[Serializable]
+public enum CardType
+{
+    None,
+    Board,
+    Reserve
 }
 
 public class CardBehaviour : MonoBehaviour
@@ -28,6 +36,8 @@ public class CardBehaviour : MonoBehaviour
     [SerializeField] private int saphireCount = 0;
     [SerializeField] private int onyxCount = 0;
     [SerializeField] private int emeraldCount = 0;
+    [SerializeField] private CardType cardType = CardType.None;
+    public CardType CardType => cardType;
 
     public GemStoneType GemStoneType => gemStoneType;
     public int PresteigeCount => presteigeCount;
@@ -55,10 +65,15 @@ public class CardBehaviour : MonoBehaviour
     {
         
     }
+    public void SetCardType(CardType cardType)
+    {
+        this.cardType = cardType;
+    }
 
     public void SetCard(GemStoneType gemStoneType, int presteigeCount, 
-    int diamondCount, int rubyCount, int saphireCount, int onyxCount, int emeraldCount)
+    int diamondCount, int rubyCount, int saphireCount, int onyxCount, int emeraldCount, bool active = true)
     {
+        gameObject.SetActive(active);
         this.gemStoneType = gemStoneType;
         int gemStoneIndex = (int)gemStoneType;
         cardSprite.sprite = GameInstance.Instance.GemSprites[gemStoneIndex];

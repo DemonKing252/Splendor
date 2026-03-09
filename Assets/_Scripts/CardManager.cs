@@ -1,17 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Linq;
-using NUnit.Framework;
-using NUnit.Framework.Constraints;
 using TMPro;
 using Unity.Netcode;
-using Unity.VisualScripting;
-using Unity.VisualScripting.Antlr3.Runtime;
-using Unity.VisualScripting.Antlr3.Runtime.Collections;
-using UnityEditor;
 using UnityEngine;
-using UnityEngine.UI;
 
 public struct NetworkToken : INetworkSerializable, IEquatable<NetworkToken>
 {
@@ -60,12 +52,13 @@ public struct NetworkCard : INetworkSerializable, IEquatable<NetworkCard>
     public int emeraldCount;
 
     public bool Equals(NetworkCard other)
-        => gemStoneType == other.gemStoneType &&
-           presteigeCount == other.presteigeCount &&
-           diamondCount == other.diamondCount &&
-           saphireCount == other.saphireCount &&
-           onyxCount == other.onyxCount &&
-           emeraldCount == other.emeraldCount;
+        => CardIndex == other.CardIndex &&
+        presteigeCount == other.presteigeCount &&
+        diamondCount == other.diamondCount &&
+        rubyCount == other.rubyCount &&
+        saphireCount == other.saphireCount &&
+        onyxCount == other.onyxCount &&
+        emeraldCount == other.emeraldCount;
 
     public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
     {
@@ -107,6 +100,12 @@ public class CardManager : NetworkBehaviour
     public NetworkList<NetworkCard> networkCards = new NetworkList<NetworkCard>();
     public CardBehaviour[] cardGOs;
 
+    [SerializeField] private Transform reserveCardTransform;
+    public CardBehaviour[] reserveGOs;
+
+    private int reserveCount = 0;
+    public int ReserveCount => reserveCount;
+
     public int[] TokensInHand;
 
     void Awake()
@@ -128,9 +127,50 @@ public class CardManager : NetworkBehaviour
 
         ServerManager.Instance.NextTurnServerRpc();
     }
+    public void ReserveCard(GameObject go)
+    {
+        if (reserveCount < 3)
+        {
+            CardBehaviour card = go.GetComponent<CardBehaviour>();
+            int CardIndex = (int)card.CardIndex;
+            NetworkCard networkCard = networkCards[CardIndex];
+
+            reserveGOs[ReserveCount].SetCard(networkCard.gemStoneType,
+                networkCard.presteigeCount,
+                networkCard.diamondCount,
+                networkCard.rubyCount,
+                networkCard.saphireCount,
+                networkCard.onyxCount,
+                networkCard.emeraldCount,
+                true
+            );
+            reserveGOs[ReserveCount].SetCardType(CardType.Reserve);
+            reserveGOs[ReserveCount].CardIndex = (ulong)ReserveCount;
+
+            reserveCount++;
+            ServerManager.Instance.RescrambleCardServerRpc(networkCard.CardIndex);
+
+            if (networkBoardTokens[(int)GemStoneType.WildCard].TokenCount > 0)
+            {
+                int wildTokenCount = networkBoardTokens[(int)GemStoneType.WildCard].TokenCount - 1;
+                inventoryTokens[(int)GemStoneType.WildCard].TokenCount++; 
+                inventoryUI.tokenTexts[(int)GemStoneType.WildCard].text = "x" + inventoryTokens[(int)GemStoneType.WildCard].TokenCount;
+            
+                UpdateBoardTokenNetworkServerRpc((int)GemStoneType.WildCard, wildTokenCount);
+            }
+            Debug.Log("Reserving at network index: " + networkCard.CardIndex.ToString());
+        }
+        else
+        {
+            // TODO: Prompt with UI eventually
+            Debug.Log("You can't reserve more then 3 cards!");
+        } 
+    }
     public void PurchaseCard(GameObject go)
     {
         CardBehaviour card = go.GetComponent<CardBehaviour>();
+
+
 
         bool currency_met = 
             (inventoryTokens[(int)GemStoneType.Diamond].TokenCount + permaDiscountTokens[(int)GemStoneType.Diamond].TokenCount >= card.DiamondCount ) &&
@@ -155,7 +195,6 @@ public class CardManager : NetworkBehaviour
         else
         {
             Debug.Log("Curreny met, we can purchase this card");
-            permaDiscountTokens[(int)card.GemStoneType].TokenCount++;
 
             int diamondDeduct = Mathf.Max(card.DiamondCount - permaDiscountTokens[(int)GemStoneType.Diamond].TokenCount, 0);
             int rubyDeduct    = Mathf.Max(card.RubyCount - permaDiscountTokens[(int)GemStoneType.Ruby].TokenCount, 0);
@@ -172,6 +211,7 @@ public class CardManager : NetworkBehaviour
             for(int idx = 0; idx < inventoryUI.tokenTexts.Length; idx++)
                 inventoryUI.tokenTexts[idx].text = "x" + inventoryTokens[idx].TokenCount;
 
+            permaDiscountTokens[(int)card.GemStoneType].TokenCount++;
             permaDiscountUI.tokenTexts[(int)card.GemStoneType].text = "+" + permaDiscountTokens[(int)card.GemStoneType].TokenCount;
             
             NetworkToken[] networkTokens = 
@@ -184,7 +224,18 @@ public class CardManager : NetworkBehaviour
             };
             ReplenishBoardTokenStackServerRpc(networkTokens);
             ServerManager.Instance.NextTurnServerRpc();
-            ServerManager.Instance.RescrambleCardServerRpc(card.CardIndex);
+
+            if (card.CardType == CardType.Board)
+            {
+                // Replace the card on the network
+                ServerManager.Instance.RescrambleCardServerRpc(card.CardIndex);
+            }
+            else
+            {
+                // Otherwise just disable it
+                card.SetCard(GemStoneType.Diamond, 0, 0, 0, 0, 0, 0, false);
+                card.SetCardType(CardType.None);
+            }
             
         }
     }
@@ -403,10 +454,13 @@ public class CardManager : NetworkBehaviour
 
         for (int idx = 0; idx < cardCount; idx++)
         {
-            //networkCards.Value[idx].CardIndex = (ulong)idx;
-            
+            var card = networkCards[idx];
+            card.CardIndex = (ulong)idx;
+            networkCards[idx] = card;
+
             ScrambleCard((ulong)idx);
         }
+        
 
     }
     public void OnNetworkCardChanged(NetworkListEvent<NetworkCard> change)
@@ -440,6 +494,7 @@ public class CardManager : NetworkBehaviour
                 card.onyxCount, 
                 card.emeraldCount
             );
+            cardGOs[i].SetCardType(CardType.Board);
 
         }
 
@@ -453,14 +508,9 @@ public class CardManager : NetworkBehaviour
         {
             boardUI.tokenTexts[idx].text = "x" + networkBoardTokens[idx].TokenCount.ToString();
         }
-    }
-    void Start()
-    {
-        if (!ServerManager.Instance.IsExplicitServer)
-        {
-            //TokenUIManager.Instance.onCollectTokens += CollectTokens;            
-            //TokenUIManager.Instance.onPurchaseCard += PurchaseCard;
-        }
+
+        foreach(var card in reserveGOs)
+            card.SetCard(GemStoneType.Diamond, 0, 0, 0, 0, 0, 0, false);
     }
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
@@ -507,7 +557,7 @@ public class CardManager : NetworkBehaviour
         }
         // Client/Host leave the board blank until the server authorizes the scramble (check ServerRpc)
         if (IsHost || IsClient)
-        {    
+        {  
             networkCards.OnListChanged += OnNetworkCardChanged;
             networkBoardTokens.OnListChanged += OnTokenValueChanged;
 
@@ -526,6 +576,10 @@ public class CardManager : NetworkBehaviour
 
             for(int i = 0; i < permaDiscountTokens.Length; i++)
                 permaDiscountTokens[i].TokenCount = 0;
+
+            reserveGOs = new CardBehaviour[reserveCardTransform.childCount];
+            for(int idx = 0; idx < reserveCardTransform.childCount; idx++)
+                reserveGOs[idx] = reserveCardTransform.GetChild(idx).GetComponent<CardBehaviour>();
 
 
             Debug.Log("Starting Client/Host");
