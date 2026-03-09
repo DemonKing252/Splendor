@@ -4,6 +4,7 @@ using System.Linq;
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public struct NetworkToken : INetworkSerializable, IEquatable<NetworkToken>
 {
@@ -95,16 +96,14 @@ public class CardManager : NetworkBehaviour
 
     private static CardManager instance;
     public static CardManager Instance => instance;
-
     
     public NetworkList<NetworkCard> networkCards = new NetworkList<NetworkCard>();
     public CardBehaviour[] cardGOs;
 
     [SerializeField] private Transform reserveCardTransform;
-    public CardBehaviour[] reserveGOs;
+    private CardBehaviour[] reserveGOs;
+    [SerializeField] private TMP_Text reservedCardStatusText;
 
-    private int reserveCount = 0;
-    public int ReserveCount => reserveCount;
 
     public int[] TokensInHand;
 
@@ -129,13 +128,29 @@ public class CardManager : NetworkBehaviour
     }
     public void ReserveCard(GameObject go)
     {
-        if (reserveCount < 3)
+        bool reserveFull = true;
+        int reserveIndex = 0;
+        
+        int counter = 0;
+        foreach(var res in reserveGOs)
+        {
+            // If the reserve slot is not filled
+            if (!res.gameObject.activeSelf)
+            {
+                reserveFull = false;
+                reserveIndex = counter;
+                break;
+            }
+            counter++;
+        }
+
+        if (!reserveFull)
         {
             CardBehaviour card = go.GetComponent<CardBehaviour>();
             int CardIndex = (int)card.CardIndex;
             NetworkCard networkCard = networkCards[CardIndex];
 
-            reserveGOs[ReserveCount].SetCard(networkCard.gemStoneType,
+            reserveGOs[reserveIndex].SetCard(networkCard.gemStoneType,
                 networkCard.presteigeCount,
                 networkCard.diamondCount,
                 networkCard.rubyCount,
@@ -144,10 +159,9 @@ public class CardManager : NetworkBehaviour
                 networkCard.emeraldCount,
                 true
             );
-            reserveGOs[ReserveCount].SetCardType(CardType.Reserve);
-            reserveGOs[ReserveCount].CardIndex = (ulong)ReserveCount;
+            reserveGOs[reserveIndex].SetCardType(CardType.Reserve);
+            reserveGOs[reserveIndex].CardIndex = (ulong)reserveIndex;
 
-            reserveCount++;
             ServerManager.Instance.RescrambleCardServerRpc(networkCard.CardIndex);
 
             if (networkBoardTokens[(int)GemStoneType.WildCard].TokenCount > 0)
@@ -159,6 +173,10 @@ public class CardManager : NetworkBehaviour
                 UpdateBoardTokenNetworkServerRpc((int)GemStoneType.WildCard, wildTokenCount);
             }
             Debug.Log("Reserving at network index: " + networkCard.CardIndex.ToString());
+            
+            ServerManager.Instance.NextTurnServerRpc();
+
+            reservedCardStatusText.gameObject.SetActive(false);
         }
         else
         {
@@ -179,13 +197,6 @@ public class CardManager : NetworkBehaviour
             (inventoryTokens[(int)GemStoneType.Onyx].TokenCount + permaDiscountTokens[(int)GemStoneType.Onyx].TokenCount    >= card.OnyxCount    ) &&
             (inventoryTokens[(int)GemStoneType.Emerald].TokenCount + permaDiscountTokens[(int)GemStoneType.Emerald].TokenCount >= card.EmeraldCount );
 
-
-        Debug.Log("Card Costs - Diamond: " + card.DiamondCount + " - Ruby: " + card.RubyCount + " - Saphire: " + card.SaphireCount + " - Onyx: " + card.OnyxCount + " - Emerald: " + card.EmeraldCount);
-        
-        Debug.Log("Inventory - Diamond: " + inventoryTokens[(int)GemStoneType.Diamond].TokenCount + " - Ruby: " + 
-        inventoryTokens[(int)GemStoneType.Ruby].TokenCount + " - Saphire: " + inventoryTokens[(int)GemStoneType.Saphire].TokenCount + 
-        " - Onyx: " + inventoryTokens[(int)GemStoneType.Onyx].TokenCount + " - Emerald: " + inventoryTokens[(int)GemStoneType.Emerald].TokenCount);
-
         if (!currency_met)
         {
             // Eventually we'll have UI messages for this. 
@@ -194,7 +205,6 @@ public class CardManager : NetworkBehaviour
         }
         else
         {
-            Debug.Log("Curreny met, we can purchase this card");
 
             int diamondDeduct = Mathf.Max(card.DiamondCount - permaDiscountTokens[(int)GemStoneType.Diamond].TokenCount, 0);
             int rubyDeduct    = Mathf.Max(card.RubyCount - permaDiscountTokens[(int)GemStoneType.Ruby].TokenCount, 0);
@@ -235,6 +245,17 @@ public class CardManager : NetworkBehaviour
                 // Otherwise just disable it
                 card.SetCard(GemStoneType.Diamond, 0, 0, 0, 0, 0, 0, false);
                 card.SetCardType(CardType.None);
+
+                bool oneActive = false;
+                foreach(var r in reserveGOs)
+                {
+                    if (r.gameObject.activeSelf)
+                        oneActive = true;
+                }
+                if (oneActive)
+                    reservedCardStatusText.gameObject.SetActive(false);
+                else                    
+                    reservedCardStatusText.gameObject.SetActive(true);
             }
             
         }
@@ -282,7 +303,6 @@ public class CardManager : NetworkBehaviour
         
         // Client -> Server -> Clients and Hosts
         
-        Debug.Log("New token count client before: " + tokenCount.ToString());
         UpdateBoardTokenNetworkServerRpc((int)type, tokenCount);
     }
     
@@ -314,7 +334,6 @@ public class CardManager : NetworkBehaviour
         var index = change.Index;
         var netToken = change.Value;
 
-        Debug.Log("New token count client after: " + netToken.ToString());
         boardUI.tokenTexts[index].text = "x" + netToken.TokenCount.ToString();
     }
 
@@ -402,7 +421,6 @@ public class CardManager : NetworkBehaviour
                 case 4: RandomizeGemCosts(4, 2, 3); break;
             }
         }
-        //Debug.Log(i + " - Gem Stone Values: " + IntArrayToList(gemCosts));
         
         GemStoneType randGemType = (GemStoneType)UnityEngine.Random.Range(0, 5); 
         /*
@@ -484,14 +502,13 @@ public class CardManager : NetworkBehaviour
         for(int i = 0; i < networkCards.Count; i++)
         {
             NetworkCard card = networkCards[i];
-            Debug.Log("Netork Card - type: " + card.gemStoneType + " - " + card.presteigeCount + " - " + card.diamondCount);
 
             cardGOs[i].SetCard(card.gemStoneType, 
-                card.presteigeCount, 
-                card.diamondCount, 
-                card.rubyCount, 
-                card.saphireCount, 
-                card.onyxCount, 
+                card.presteigeCount,
+                card.diamondCount,
+                card.rubyCount,
+                card.saphireCount,
+                card.onyxCount,
                 card.emeraldCount
             );
             cardGOs[i].SetCardType(CardType.Board);
@@ -508,7 +525,6 @@ public class CardManager : NetworkBehaviour
         {
             boardUI.tokenTexts[idx].text = "x" + networkBoardTokens[idx].TokenCount.ToString();
         }
-
         foreach(var card in reserveGOs)
             card.SetCard(GemStoneType.Diamond, 0, 0, 0, 0, 0, 0, false);
     }
@@ -577,6 +593,7 @@ public class CardManager : NetworkBehaviour
             for(int i = 0; i < permaDiscountTokens.Length; i++)
                 permaDiscountTokens[i].TokenCount = 0;
 
+            
             reserveGOs = new CardBehaviour[reserveCardTransform.childCount];
             for(int idx = 0; idx < reserveCardTransform.childCount; idx++)
                 reserveGOs[idx] = reserveCardTransform.GetChild(idx).GetComponent<CardBehaviour>();

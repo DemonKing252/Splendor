@@ -401,7 +401,7 @@ GameObject:
   - component: {fileID: 19301279}
   - component: {fileID: 19301278}
   m_Layer: 5
-  m_Name: Msg
+  m_Name: ReservedCardsStatus
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2566,10 +2566,10 @@ RectTransform:
   - {fileID: 1389005255}
   m_Father: {fileID: 799829746}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 1}
-  m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 20, y: -1079}
-  m_SizeDelta: {x: 909.8, y: 345.8}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 20, y: 361}
+  m_SizeDelta: {x: 909.8, y: 345.80005}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &380497550
 MonoBehaviour:
@@ -6644,7 +6644,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 22400762, guid: 67117722a812a2e46ab8cb8eafbf5f5e, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0.000049591064
+      value: -0.00008010864
       objectReference: {fileID: 0}
     - target: {fileID: 22426080, guid: 67117722a812a2e46ab8cb8eafbf5f5e, type: 3}
       propertyPath: m_AnchorMax.x
@@ -9403,7 +9403,7 @@ MonoBehaviour:
     - {fileID: 313266635}
   cardGOs: []
   reserveCardTransform: {fileID: 1389005255}
-  reserveGOs: []
+  reservedCardStatusText: {fileID: 19301278}
   TokensInHand: 
 --- !u!4 &1270384322
 Transform:
@@ -10105,7 +10105,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
   m_AnchoredPosition: {x: 20, y: -167}
-  m_SizeDelta: {x: 910, y: 895}
+  m_SizeDelta: {x: 906, y: 887.8}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1390596744
 MonoBehaviour:

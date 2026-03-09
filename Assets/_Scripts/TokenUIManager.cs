@@ -64,6 +64,9 @@ public class TokenUIManager : MonoBehaviour
 
     public void ShowConfirmUI(TurnAction action, GameObject go = null)
     {
+        if (!ServerManager.Instance.IsMyTurn)
+            return;
+        
         this.activeCardGO = go;
         turnAction = action;
         activeUICanvas = action switch
