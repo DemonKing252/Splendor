@@ -111,6 +111,7 @@ public class CardManager : NetworkBehaviour
     {
         instance = this;
     }
+    
 
     public void CollectTokens()
     {
@@ -260,6 +261,16 @@ public class CardManager : NetworkBehaviour
             
         }
     }
+    public void PlaceTokensBack()
+    {
+        for(int idx = 0; idx < TokensInHand.Length - 1; idx++)
+        {
+            int tokenCount = networkBoardTokens[idx].TokenCount + TokensInHand[idx];
+            UpdateBoardTokenNetworkServerRpc(idx, tokenCount);
+            inventoryTokens[idx].TokenCount -= TokensInHand[idx];
+            TokensInHand[idx] = 0;
+        }
+    }
 
     public void OnTokenClicked(GemStoneType type)
     {
@@ -288,10 +299,16 @@ public class CardManager : NetworkBehaviour
         {            
             TokensInHand[(int)type]--;
             return;
-        } 
+        }
+        int reservedTokenSlots = 0;
+        for(int idx = 0; idx < TokensInHand.Length; idx++)
+        {
+            if (TokensInHand[idx] > 0)
+                reservedTokenSlots++;
+        }
 
         
-        if (TokensInHand.Sum() > 1 && TokenUIManager.Instance.TurnAction == TurnAction.Hidden)
+        if ((maxStack > 1 || reservedTokenSlots > 2) && TokenUIManager.Instance.TurnAction == TurnAction.Hidden)
             TokenUIManager.Instance.ShowConfirmUI(TurnAction.Collect_Token);
             //confirmMsg.gameObject.SetActive(true);
         

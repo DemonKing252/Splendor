@@ -43,9 +43,10 @@ public class TokenUIManager : MonoBehaviour
         });
 
         // TODO: Support refunding the player in the future
-        closeBtn.onClick.AddListener(() => 
-            HideConfirmUI() 
-        );
+        closeBtn.onClick.AddListener(() => {
+            CardManager.Instance.PlaceTokensBack();
+            HideConfirmUI();
+        });
         buyBtn.onClick.AddListener(() =>
         {
             CardManager.Instance.PurchaseCard(activeCardGO); 
