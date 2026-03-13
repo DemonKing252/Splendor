@@ -61,10 +61,10 @@ public class ServerManager : NetworkBehaviour
         }
     }
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
-    public void RescrambleCardServerRpc(ulong cardIndex)
+    public void RescrambleCardServerRpc(ulong cardIndex, CardType type)
     {
         // Scramble card at Network Object ID (cardIndex)
-        CardManager.Instance.ScrambleCard(cardIndex);
+        CardManager.Instance.ScrambleCard(cardIndex, type);
 
         // Sync cards across network
         //CardManager.Instance.SyncBoardClientRpc(CardManager.Instance.networkCards);

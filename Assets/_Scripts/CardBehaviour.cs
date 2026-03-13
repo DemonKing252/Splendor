@@ -20,8 +20,9 @@ public enum GemStoneType
 public enum CardType
 {
     None,
-    Board,
-    Reserve
+    Development,
+    Reserve,
+    Noble
 }
 
 public class CardBehaviour : MonoBehaviour
