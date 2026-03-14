@@ -311,7 +311,7 @@ public class CardManager : NetworkBehaviour
 
     public void OnTokenClicked(GemStoneType type)
     {
-        if (!ServerManager.Instance.IsMyTurn)
+        if (!ServerManager.Instance.IsMyTurn || TokenUIManager.Instance.TurnAction != TurnAction.Hidden)
         {
             Debug.Log("Not my turn. Returning.");
             return;
