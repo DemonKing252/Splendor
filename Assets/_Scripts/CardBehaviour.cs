@@ -4,6 +4,7 @@ using UnityEngine.UI;
 
 using Unity.Netcode;
 using System;
+using Unity.VisualScripting;
 
 [Serializable]
 public enum GemStoneType
@@ -69,6 +70,7 @@ public class CardBehaviour : MonoBehaviour
     public void SetCardType(CardType cardType)
     {
         this.cardType = cardType;
+        cardSprite.gameObject.SetActive(cardType != CardType.Noble);
     }
 
     public void SetCard(GemStoneType gemStoneType, int presteigeCount, 
@@ -77,6 +79,7 @@ public class CardBehaviour : MonoBehaviour
         gameObject.SetActive(active);
         this.gemStoneType = gemStoneType;
         int gemStoneIndex = (int)gemStoneType;
+        
         cardSprite.sprite = GameInstance.Instance.GemSprites[gemStoneIndex];
 
         this.presteigeCount = presteigeCount;

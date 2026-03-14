@@ -312,8 +312,11 @@ public class CardManager : NetworkBehaviour
     public void OnTokenClicked(GemStoneType type)
     {
         if (!ServerManager.Instance.IsMyTurn)
+        {
+            Debug.Log("Not my turn. Returning.");
             return;
-
+        }
+            
         int tokenCount = networkBoardTokens[(int)type].TokenCount;
         
         TokensInHand[(int)type]++;
@@ -345,7 +348,7 @@ public class CardManager : NetworkBehaviour
         }
 
         
-        if ((maxStack > 1 || reservedTokenSlots > 2) && TokenUIManager.Instance.TurnAction == TurnAction.Hidden)
+        if (maxStack > 1 || reservedTokenSlots > 2)
             TokenUIManager.Instance.ShowConfirmUI(TurnAction.Collect_Token);
             //confirmMsg.gameObject.SetActive(true);
         

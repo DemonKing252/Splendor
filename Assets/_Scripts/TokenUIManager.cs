@@ -65,21 +65,31 @@ public class TokenUIManager : MonoBehaviour
 
     public void ShowConfirmUI(TurnAction action, GameObject go = null)
     {
-        if (!ServerManager.Instance.IsMyTurn)
+        if (!ServerManager.Instance.IsMyTurn || TurnAction != TurnAction.Hidden)
             return;
 
         
-        this.activeCardGO = go;
-        turnAction = action;
         switch(action)
         {
             case TurnAction.Collect_Token:
                 activeUICanvas = tokenCollectionUI;
+                this.activeCardGO = go;
+                turnAction = action;
             break;
             case TurnAction.Buy_OR_Reserve:
                 CardBehaviour card = go.GetComponent<CardBehaviour>();
-                //if (!CardManager.Instance.CurrentyMet(card) && CardManager.Instance.ReserveFull().Item1)
-                //    return;
+
+                // Reserve is full and we can't afford the card
+                if (card.CardType == CardType.Development && !CardManager.Instance.CurrentyMet(card) && CardManager.Instance.ReserveFull().Item1)
+                    return;
+
+                // We can't afford the Noble
+                if (card.CardType == CardType.Noble && !CardManager.Instance.CurrentyMet(card))
+                    return;
+
+                // We can't afford the Reserved card
+                if (card.CardType == CardType.Reserve && !CardManager.Instance.CurrentyMet(card))
+                    return;
 
                 activeUICanvas = buyAndReserveUI;
                 if (card.CardType == CardType.Reserve || 
@@ -90,6 +100,8 @@ public class TokenUIManager : MonoBehaviour
                     reserveBtn.gameObject.SetActive(true);
                 
                 buyBtn.gameObject.SetActive(CardManager.Instance.CurrentyMet(card));
+                this.activeCardGO = go;
+                turnAction = action;
             break;
         
         }
