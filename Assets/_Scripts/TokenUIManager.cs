@@ -67,15 +67,33 @@ public class TokenUIManager : MonoBehaviour
     {
         if (!ServerManager.Instance.IsMyTurn)
             return;
+
         
         this.activeCardGO = go;
         turnAction = action;
-        activeUICanvas = action switch
+        switch(action)
         {
-            TurnAction.Buy_OR_Reserve => buyAndReserveUI,
-            TurnAction.Collect_Token => tokenCollectionUI,
-            _ => throw new Exception("Unknown Turn Action")
-        };
+            case TurnAction.Collect_Token:
+                activeUICanvas = tokenCollectionUI;
+            break;
+            case TurnAction.Buy_OR_Reserve:
+                CardBehaviour card = go.GetComponent<CardBehaviour>();
+                //if (!CardManager.Instance.CurrentyMet(card) && CardManager.Instance.ReserveFull().Item1)
+                //    return;
+
+                activeUICanvas = buyAndReserveUI;
+                if (card.CardType == CardType.Reserve || 
+                    card.CardType == CardType.Noble) {
+                    reserveBtn.gameObject.SetActive(false);
+                }
+                else if (card.CardType == CardType.Development)
+                    reserveBtn.gameObject.SetActive(true);
+                
+                buyBtn.gameObject.SetActive(CardManager.Instance.CurrentyMet(card));
+            break;
+        
+        }
+
         activeUICanvas.SetActive(true);
     }
     public void HideConfirmUI()

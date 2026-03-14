@@ -73,7 +73,6 @@ public class ServerManager : NetworkBehaviour
 
     public void UpdatePlayerTurnStatus(ulong oldValue, ulong newValue)
     {
-        Debug.Log("Updating text: " + newValue);
 
         // This client's IP address matches the IP address of who's turn it is:
         if (NetworkManager.Singleton.LocalClientId == playerTurn.Value)
