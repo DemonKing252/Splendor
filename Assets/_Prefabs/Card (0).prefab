@@ -174,8 +174,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -54.7}
-  m_SizeDelta: {x: 168.51, y: 113.72}
+  m_AnchoredPosition: {x: -10.37, y: -53.8}
+  m_SizeDelta: {x: 191.2, y: 129.9}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1372771555234720966
 MonoBehaviour:
@@ -197,8 +197,8 @@ MonoBehaviour:
   m_ChildAlignment: 0
   m_StartCorner: 0
   m_StartAxis: 1
-  m_CellSize: {x: 50, y: 60}
-  m_Spacing: {x: 10, y: 0}
+  m_CellSize: {x: 76, y: 76}
+  m_Spacing: {x: -10, y: -10}
   m_Constraint: 2
   m_ConstraintCount: 2
 --- !u!1 &1761517584173880637
@@ -804,14 +804,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 1, g: 0.9019608, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 8793915729297761979, guid: 250cbb7964906604985ad14cecac8f91, type: 3}
+  m_Sprite: {fileID: 1033477913, guid: 119a158817562ba418281737e2465bb6, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -880,14 +880,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.8, g: 0.8, b: 1, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 1e14fbcf3d89273459651bdfa1f90c17, type: 3}
+  m_Sprite: {fileID: -1368677594, guid: 119a158817562ba418281737e2465bb6, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1211,7 +1211,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 2750298860172458669, guid: a35be7b0694d54e42873e8964cad30cb, type: 3}
+  m_Sprite: {fileID: 317199057, guid: 119a158817562ba418281737e2465bb6, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1280,14 +1280,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.627451, g: 0.627451, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -5225540622116197949, guid: 6ef0c05e0bf9c6c459e3d0907359e8b0, type: 3}
+  m_Sprite: {fileID: 537837550, guid: 119a158817562ba418281737e2465bb6, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1356,14 +1356,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.6666667, g: 0.6666667, b: 0.6666667, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 7680820834086852892, guid: 337758270797dfc40946f32c11c1024c, type: 3}
+  m_Sprite: {fileID: 866921335, guid: 119a158817562ba418281737e2465bb6, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1463,6 +1463,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6c15ecca4db956a4faa7792edb7d56c2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  buttonBehaviour: {fileID: 0}
   presteigeText: {fileID: 8629518799656242077}
   cardSprite: {fileID: 5605283875995773737}
   gemStoneType: 5
@@ -1472,6 +1473,8 @@ MonoBehaviour:
   saphireCount: 0
   onyxCount: 0
   emeraldCount: 0
+  cardType: 0
+  CardIndex: 0
   gems:
   - {fileID: 4797523411962456907}
   - {fileID: 7287930761857115675}

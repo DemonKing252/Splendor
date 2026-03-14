@@ -6,7 +6,11 @@ public class GameInstance : MonoBehaviour
 {
 
     [SerializeField] private Sprite[] gemSprites;
-    public Sprite[] GemSprites { get { return gemSprites; } }
+    public Sprite[] GemSprites => gemSprites;
+
+    [SerializeField] private Color[] gemVertexColors;
+    public Color[] GemVertexColors => gemVertexColors; 
+    
 
     private static GameInstance instance;
     public static GameInstance Instance => instance;

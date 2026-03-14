@@ -117,7 +117,7 @@ public class CardManager : NetworkBehaviour
         get => prestigePoints; 
         set { 
             prestigePoints = value; 
-            prestigePointsText.text = "Prestige Points: " + value.ToString(); 
+            prestigePointsText.text = "Prestige Points: " + value.ToString() + "/15";
         }
     }
 

@@ -81,6 +81,7 @@ public class CardBehaviour : MonoBehaviour
         int gemStoneIndex = (int)gemStoneType;
         
         cardSprite.sprite = GameInstance.Instance.GemSprites[gemStoneIndex];
+        cardSprite.color = GameInstance.Instance.GemVertexColors[gemStoneIndex];
 
         this.presteigeCount = presteigeCount;
         presteigeText.text = presteigeCount != 0 ? presteigeCount.ToString() : string.Empty;
