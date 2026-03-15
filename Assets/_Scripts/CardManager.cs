@@ -210,20 +210,51 @@ public class CardManager : NetworkBehaviour
             Debug.Log("You can't reserve more then 3 cards!");
         } 
     }
+    /*
+        Diamond,
+        Ruby,
+        Saphire,
+        Onyx,
+        Emerald,
+    */
     public bool CurrentyMet(CardBehaviour card)
     {
+                
         if (card.CardType != CardType.Noble)
-            return (inventoryTokens[(int)GemStoneType.Diamond].TokenCount + permaDiscountTokens[(int)GemStoneType.Diamond].TokenCount >= card.DiamondCount ) &&
-                (inventoryTokens[(int)GemStoneType.Ruby].TokenCount + permaDiscountTokens[(int)GemStoneType.Ruby].TokenCount    >= card.RubyCount    ) &&
+        {
+            int[] costs = new int[5]
+            {
+                card.DiamondCount,
+                card.RubyCount,
+                card.SaphireCount,
+                card.OnyxCount,
+                card.EmeraldCount
+            };
+            int wildCardCount = inventoryTokens[(int)GemStoneType.WildCard].TokenCount;
+
+            for(int idx = 0; idx < 5; idx++)
+            {
+                if (inventoryTokens[idx].TokenCount + permaDiscountTokens[idx].TokenCount < costs[idx])
+                {
+                    wildCardCount -= costs[idx] - (inventoryTokens[idx].TokenCount + permaDiscountTokens[idx].TokenCount);
+                }
+            }
+
+            return wildCardCount >= 0 || ((inventoryTokens[(int)GemStoneType.Diamond].TokenCount + permaDiscountTokens[(int)GemStoneType.Diamond].TokenCount >= card.DiamondCount ) &&
+                (inventoryTokens[(int)GemStoneType.Ruby].TokenCount + permaDiscountTokens[(int)GemStoneType.Ruby].TokenCount >= card.RubyCount    ) &&
                 (inventoryTokens[(int)GemStoneType.Saphire].TokenCount + permaDiscountTokens[(int)GemStoneType.Saphire].TokenCount >= card.SaphireCount ) &&
-                (inventoryTokens[(int)GemStoneType.Onyx].TokenCount + permaDiscountTokens[(int)GemStoneType.Onyx].TokenCount    >= card.OnyxCount    ) &&
-                (inventoryTokens[(int)GemStoneType.Emerald].TokenCount + permaDiscountTokens[(int)GemStoneType.Emerald].TokenCount >= card.EmeraldCount );
+                (inventoryTokens[(int)GemStoneType.Onyx].TokenCount + permaDiscountTokens[(int)GemStoneType.Onyx].TokenCount >= card.OnyxCount    ) &&
+                (inventoryTokens[(int)GemStoneType.Emerald].TokenCount + permaDiscountTokens[(int)GemStoneType.Emerald].TokenCount >= card.EmeraldCount ));
+        }
         else
+        {
             return (permaDiscountTokens[(int)GemStoneType.Diamond].TokenCount >= card.DiamondCount ) &&
                 (permaDiscountTokens[(int)GemStoneType.Ruby].TokenCount    >= card.RubyCount    ) &&
                 (permaDiscountTokens[(int)GemStoneType.Saphire].TokenCount >= card.SaphireCount ) &&
                 (permaDiscountTokens[(int)GemStoneType.Onyx].TokenCount    >= card.OnyxCount    ) &&
                 (permaDiscountTokens[(int)GemStoneType.Emerald].TokenCount >= card.EmeraldCount );
+        }
+            
     }
     public void PurchaseCard(GameObject go)
     {
@@ -239,17 +270,36 @@ public class CardManager : NetworkBehaviour
         {
             if (card.CardType != CardType.Noble)
             {
-                int diamondDeduct = Mathf.Max(card.DiamondCount - permaDiscountTokens[(int)GemStoneType.Diamond].TokenCount, 0);
-                int rubyDeduct    = Mathf.Max(card.RubyCount - permaDiscountTokens[(int)GemStoneType.Ruby].TokenCount, 0);
-                int saphireDeduct = Mathf.Max(card.SaphireCount - permaDiscountTokens[(int)GemStoneType.Saphire].TokenCount, 0);
-                int onyxDeduct    = Mathf.Max(card.OnyxCount - permaDiscountTokens[(int)GemStoneType.Onyx].TokenCount, 0);
-                int emeraldDeduct = Mathf.Max(card.EmeraldCount - permaDiscountTokens[(int)GemStoneType.Emerald].TokenCount, 0);
+                int[] costs = new int[5]
+                {
+                    card.DiamondCount,
+                    card.RubyCount,
+                    card.SaphireCount,
+                    card.OnyxCount,
+                    card.EmeraldCount
+                };
+                int[] wildCardsUsed = new int[5] {0, 0, 0, 0, 0};
+
+                for(int idx = 0; idx < 5; idx++)
+                {
+                    if (inventoryTokens[idx].TokenCount + permaDiscountTokens[idx].TokenCount < costs[idx])
+                    {
+                        wildCardsUsed[idx] += costs[idx] - (inventoryTokens[idx].TokenCount + permaDiscountTokens[idx].TokenCount);
+                    }
+                }
+
+                int diamondDeduct = Mathf.Max(card.DiamondCount - permaDiscountTokens[(int)GemStoneType.Diamond].TokenCount - wildCardsUsed[0], 0);
+                int rubyDeduct    = Mathf.Max(card.RubyCount - permaDiscountTokens[(int)GemStoneType.Ruby].TokenCount - wildCardsUsed[1], 0);
+                int saphireDeduct = Mathf.Max(card.SaphireCount - permaDiscountTokens[(int)GemStoneType.Saphire].TokenCount - wildCardsUsed[2], 0);
+                int onyxDeduct    = Mathf.Max(card.OnyxCount - permaDiscountTokens[(int)GemStoneType.Onyx].TokenCount - wildCardsUsed[3], 0);
+                int emeraldDeduct = Mathf.Max(card.EmeraldCount - permaDiscountTokens[(int)GemStoneType.Emerald].TokenCount - wildCardsUsed[4], 0);
 
                 inventoryTokens[(int)GemStoneType.Diamond].TokenCount -= diamondDeduct;
                 inventoryTokens[(int)GemStoneType.Ruby].TokenCount    -= rubyDeduct;
                 inventoryTokens[(int)GemStoneType.Saphire].TokenCount -= saphireDeduct;
                 inventoryTokens[(int)GemStoneType.Onyx].TokenCount    -= onyxDeduct;
                 inventoryTokens[(int)GemStoneType.Emerald].TokenCount -= emeraldDeduct;
+                inventoryTokens[(int)GemStoneType.WildCard].TokenCount -= wildCardsUsed.Sum();
 
                 for(int idx = 0; idx < inventoryUI.tokenTexts.Length; idx++)
                     inventoryUI.tokenTexts[idx].text = "x" + inventoryTokens[idx].TokenCount;
@@ -265,6 +315,7 @@ public class CardManager : NetworkBehaviour
                    new NetworkToken{TokenCount=saphireDeduct},
                    new NetworkToken{TokenCount=onyxDeduct},
                    new NetworkToken{TokenCount=emeraldDeduct},
+                   new NetworkToken{TokenCount=wildCardsUsed.Sum()},
                 };
                 ReplenishBoardTokenStackServerRpc(networkTokens);
             }
