@@ -1,17 +1,32 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
-using Unity.Collections.LowLevel.Unsafe;
+using Unity.Collections;
 using Unity.Netcode;
 using Unity.VisualScripting;
 using UnityEngine;
 
+public struct NetworkClient : INetworkSerializable, IEquatable<NetworkClient>
+{
+    public ulong ClientId;
+    public FixedString32Bytes UserName;
+
+    public bool Equals(NetworkClient other)
+    {
+        return ClientId == other.ClientId &&
+        UserName == other.UserName;
+    }
+
+    public void NetworkSerialize<T>(BufferSerializer<T> serializer) where T : IReaderWriter
+    {
+        serializer.SerializeValue(ref ClientId);
+        serializer.SerializeValue(ref UserName);
+    }
+}
+
 
 public class ServerManager : NetworkBehaviour
 {
-    public List<Tuple<ulong, string>> clientIDs = new List<Tuple<ulong, string>>();
+    public NetworkList<NetworkClient> clients = new NetworkList<NetworkClient>();
     public NetworkVariable<ulong> playerTurn = new NetworkVariable<ulong>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
     public int playerTurnIndex = 0;
     public bool IsMyTurn
@@ -81,8 +96,8 @@ public class ServerManager : NetworkBehaviour
         try
         {           
             // Next players turn.
-            playerTurnIndex = (playerTurnIndex + 1) % clientIDs.Count;
-            playerTurn.Value = clientIDs[playerTurnIndex].Item1;
+            playerTurnIndex = (playerTurnIndex + 1) % clients.Count;
+            playerTurn.Value = clients[playerTurnIndex].ClientId;
             Debug.Log("Player: " + playerTurn.Value + " turn.");
         }
         catch(Exception e)
@@ -105,19 +120,22 @@ public class ServerManager : NetworkBehaviour
     {
 
         // This client's IP address matches the IP address of who's turn it is:
-        if (NetworkManager.Singleton.LocalClientId == playerTurn.Value)
+        if (NetworkManager.Singleton.LocalClientId == newValue)
             CardManager.Instance.playerTurnText.text = "It's your turn!";
         else
         {
-            // TODO: Eventually support usernames.
-            try {
-                var player = clientIDs.Where(c => c.Item1 == playerTurn.Value).First();
-                CardManager.Instance.playerTurnText.text = "It's player's " + player.Item2 + " turn!";
+            string username = null;
+            foreach(var c in clients)
+            {
+                if (c.ClientId == newValue)
+                {
+                    username = c.UserName.ToSafeString();
+                    break;
+                }
             }
-            catch (Exception e) {
-                playerTurn = null;
-            }
-            
+
+            CardManager.Instance.playerTurnText.text = "It's player's " + username + " turn!";
+
         } 
 
     }
@@ -129,17 +147,56 @@ public class ServerManager : NetworkBehaviour
 
         Debug.Log("Client joined the server at ID: " + clientID);
         
-        clientIDs.Add(new Tuple<ulong, string>(clientID, Utility.userName));
-        CardManager.Instance.SetupBoardClientRpc();
-        UpdatePlayerTurnStatus(0, 0);
 
+        clients.Add(new NetworkClient{ClientId=clientID,UserName=""});
+        CardManager.Instance.SetupBoardClientRpc();
+        
+        UpdatePlayerTurnStatus(0, 0);
+        RequestUserNameClientRpc(new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new ulong[] { clientID }
+            }
+        });
+
+        
     }
+
+    
+    [ClientRpc]
+    public void RequestUserNameClientRpc(ClientRpcParams rpcParams = default)
+    {
+        SendUsernameServerRpc(NetworkManager.Singleton.LocalClientId, Utility.userName);        
+    }
+    
+    [ServerRpc(RequireOwnership = false)]
+    public void SendUsernameServerRpc(ulong clientId, string username)
+    {
+        for(int i = 0; i < clients.Count; i++)
+        {
+            if (clients[i].ClientId == clientId)
+            {                
+                NetworkClient client = clients[i];
+                client.UserName = username.ToSafeString();
+                clients[i] = client;
+
+            }
+        }
+    }
+
     // Called on Server for every client that disconnects.
     public void OnClientDisconnected(ulong clientID)
     {
-        var delete_me = clientIDs.Where(c => c.Item1 == clientID).First();
+        for(int i = 0; i < clients.Count; i++)
+        {
+            if (clients[i].ClientId == clientID)
+            {
+                clients.RemoveAt(i);
+            }
+        }
+
         // Only the Host/Client can spawn the player.
-        clientIDs.Remove(delete_me);
         Debug.Log("Client disconnected the server at ID: " + clientID);
     }
 
