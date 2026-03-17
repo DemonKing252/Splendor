@@ -66,7 +66,10 @@ public class TokenUIManager : MonoBehaviour
     public void ShowConfirmUI(TurnAction action, GameObject go = null)
     {
         if (!ServerManager.Instance.IsMyTurn || TurnAction != TurnAction.Hidden)
+        {
+            Debug.Log("Returning, not showing UI");
             return;
+        }
 
         
         switch(action)

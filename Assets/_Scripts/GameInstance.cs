@@ -2,9 +2,13 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 
+public static class Utility
+{
+    public static string userName = "";
+}
+
 public class GameInstance : MonoBehaviour
 {
-
     [SerializeField] private Sprite[] gemSprites;
     public Sprite[] GemSprites => gemSprites;
 

@@ -9,9 +9,9 @@ public class BoardTokenBehaviour : NetworkBehaviour
 
     public GemStoneType gemStoneType;
 
-    void Start()
+    public override void OnNetworkSpawn()
     {
-        if (!IsServer)
-            GetComponent<Button>().onClick.AddListener(() => { onTokenClicked?.Invoke(gemStoneType); });     
+        if (!ServerManager.Instance.IsExplicitServer)
+            GetComponent<Button>().onClick.AddListener(() => { Debug.Log("clicked token"); onTokenClicked?.Invoke(gemStoneType); });     
     }
 }

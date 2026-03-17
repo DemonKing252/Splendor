@@ -25,33 +25,22 @@ public class MainMenu : NetworkBehaviour
             NetworkManager.SceneManager.LoadScene("Main", LoadSceneMode.Single);
         }
     }
-
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-
+        Utility.userName = userName.text;
         NetworkManager.Singleton.GetComponent<UnityTransport>().ConnectionData.Address = ipAddress.text;
         NetworkManager.Singleton.GetComponent<UnityTransport>().ConnectionData.Port = ushort.Parse(portNo.text);
-        startServerBtn.onClick.AddListener(() =>
-        {
-            NetworkManager.Singleton.StartServer();
-        });
-        hostGameBtn.onClick.AddListener(() =>
-        {
-            NetworkManager.Singleton.StartHost();
-        });
-        startMatchMakingBtn.onClick.AddListener(() =>
-        {
-            NetworkManager.Singleton.StartClient();
-        });
-        ipAddress.onValueChanged.AddListener((string msg) => 
-        {
-            NetworkManager.Singleton.GetComponent<UnityTransport>().ConnectionData.Address = msg;
-        });
+
+        startServerBtn.onClick.AddListener(() => NetworkManager.Singleton.StartServer() );
+        hostGameBtn.onClick.AddListener(() => NetworkManager.Singleton.StartHost() );
+        startMatchMakingBtn.onClick.AddListener(() => NetworkManager.Singleton.StartClient() 
+        );
+        ipAddress.onValueChanged.AddListener((string msg) => NetworkManager.Singleton.GetComponent<UnityTransport>().ConnectionData.Address = msg );
         portNo.onValueChanged.AddListener((string msg) => 
-        {
-            NetworkManager.Singleton.GetComponent<UnityTransport>().ConnectionData.Port = ushort.Parse(msg);
-        });
+            NetworkManager.Singleton.GetComponent<UnityTransport>().ConnectionData.Port = ushort.Parse(msg));
+            
+        userName.onValueChanged.AddListener((string user) => Utility.userName = userName.text);
     }
 
     // Update is called once per frame

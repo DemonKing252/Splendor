@@ -362,6 +362,7 @@ public class CardManager : NetworkBehaviour
 
     public void OnTokenClicked(GemStoneType type)
     {
+        Debug.Log("clicked on: " + type);
         if (!ServerManager.Instance.IsMyTurn || TokenUIManager.Instance.TurnAction != TurnAction.Hidden)
         {
             Debug.Log("Not my turn. Returning.");
@@ -369,6 +370,8 @@ public class CardManager : NetworkBehaviour
         }
             
         int tokenCount = networkBoardTokens[(int)type].TokenCount;
+
+        Debug.Log("Token count: " + networkBoardTokens[(int)type].TokenCount.ToString());
         
         TokensInHand[(int)type]++;
 
@@ -594,6 +597,7 @@ public class CardManager : NetworkBehaviour
             card.cardType = CardType.Development;
 
             devNetworkCards[idx] = card;
+            //Debug.Log("Srambled card: " + devNetworkCards[idx].gemStoneType); 
 
             ScrambleCard((ulong)idx, CardType.Development);
         }
@@ -604,10 +608,9 @@ public class CardManager : NetworkBehaviour
             card.CardIndex = (ulong)idx;
             card.cardType = CardType.Noble;
             devNetworkCards[idx] = card;
-            
+                 
             ScrambleCard((ulong)idx, CardType.Noble);
-        }
-        
+        }        
 
     }
     public void OnDevNetworkCardChanged(NetworkListEvent<NetworkCard> change)
@@ -642,6 +645,7 @@ public class CardManager : NetworkBehaviour
     [Rpc(SendTo.ClientsAndHost, InvokePermission = RpcInvokePermission.Everyone)]
     public void SetupBoardClientRpc()
     {
+        Debug.Log("Setting up Board on client side...");
         for(int i = 0; i < devNetworkCards.Count; i++)
         {
             NetworkCard card = devNetworkCards[i];
@@ -734,7 +738,6 @@ public class CardManager : NetworkBehaviour
             }
 
             ScrambleBoard(cardCount, nobleTransform.childCount);
-            Debug.Log("Starting Server...");            
         }
         // Client/Host leave the board blank until the server authorizes the scramble (check ServerRpc)
         if (IsHost || IsClient)
