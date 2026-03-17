@@ -558,6 +558,9 @@ public class CardManager : NetworkBehaviour
         
         for(int idx = 0; idx < gemCosts.Length; idx++)
             gemCosts[idx] = 0;
+
+            
+        //Debug.Log("Scrambled card: " + card.diamondCount);
     }
 
     public void ScrambleBoard(int devCount, int nobleCount)
@@ -686,7 +689,9 @@ public class CardManager : NetworkBehaviour
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     public override void OnNetworkSpawn()
+    //public void Setup()
     {
+        Debug.Log("Loading card manager...");
 
         int cardCount = cardBoardTransform.childCount;
 

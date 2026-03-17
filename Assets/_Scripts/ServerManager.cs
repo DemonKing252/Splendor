@@ -1,5 +1,8 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Netcode;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -30,13 +33,20 @@ public class ServerManager : NetworkBehaviour
     {
         if (IsServer)
         {
+
             // start with player 0.
             playerTurn.Value = 0;
             playerTurnIndex = 0;
 
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
             NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
+
+            // Make up for the timing issue.   
+            //OnClientConnected(NetworkManager.Singleton.LocalClientId);
+            
+            StartCoroutine(nameof(WaitUntilNextFrame));            
         }
+
         // If the app runs as a Host but not a server *explicitly*
         if (!IsExplicitServer)
         {       
@@ -45,6 +55,20 @@ public class ServerManager : NetworkBehaviour
         }        
 
     }
+
+    private IEnumerable WaitUntilNextFrame()
+    {
+        // Wait one frame so all NetworkObjects finish spawning
+        yield return null;
+
+        foreach(var kvp in NetworkManager.Singleton.ConnectedClients)
+        {
+            OnClientConnected(kvp.Key);
+        }            
+        UpdatePlayerTurnStatus(0, 0);
+    }
+
+
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
     public void NextTurnServerRpc()
     {
@@ -84,7 +108,7 @@ public class ServerManager : NetworkBehaviour
     }
 
     // Called on Server for every client that connects.
-    void OnClientConnected(ulong clientID)
+    public void OnClientConnected(ulong clientID)
     {
         // Only the Host/Client can spawn the player.
 
@@ -96,7 +120,7 @@ public class ServerManager : NetworkBehaviour
 
     }
     // Called on Server for every client that disconnects.
-    void OnClientDisconnected(ulong clientID)
+    public void OnClientDisconnected(ulong clientID)
     {
         // Only the Host/Client can spawn the player.
         clientIDs.Remove(clientID);
