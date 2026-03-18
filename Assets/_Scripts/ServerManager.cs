@@ -195,13 +195,17 @@ public class ServerManager : NetworkBehaviour
     // Called on Server for every client that disconnects.
     public void OnClientDisconnected(ulong clientID)
     {
+        Debug.Log("Calling Client Disconnect [ClientID,LocalID,IsServer,IsHost,IsClient]: " + 
+        clientID + "," + NetworkManager.Singleton.LocalClientId + "," + IsServer + "," + IsHost + "," + IsClient
+        );
         bool isLocalDisconnect = clientID == NetworkManager.Singleton.LocalClientId;
         bool isShuttingDown = !NetworkManager.Singleton.IsListening;
-        bool isSafe = !(isLocalDisconnect || isShuttingDown);
-        // If the host is shutting down, do NOT touch NetworkList or NetworkVariables.
+        // [Host] -> { [Client][Server] }
+        // [Remote Client] -> {[Client]}
+        // If the this is the HOST-SERVER instance not the HOST-CLIENT instance, don't touch the variables.
 
         Debug.Log("Client disconnected the server at ID: " + clientID);
-        if (IsServer && isSafe)
+        if (IsServer && !(isLocalDisconnect || isShuttingDown))
         {
             Debug.Log("Calling server shutdown");
             // Only the Host/Client can spawn the player.
@@ -224,7 +228,7 @@ public class ServerManager : NetworkBehaviour
         {
             Debug.Log("Calling client shutdown");
             Utility.server_status_msg_color = Color.yellow;
-            Utility.server_status_msg = "⚠️ Lost connection to Host!";
+            Utility.server_status_msg = "Lost connection to Host!";
 
             Debug.Log("Lost connection to host, returning to main menu");
             NetworkManager.Singleton.Shutdown();
