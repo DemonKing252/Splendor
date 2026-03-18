@@ -4,6 +4,7 @@ using Unity.Collections;
 using Unity.Netcode;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public struct NetworkClient : INetworkSerializable, IEquatable<NetworkClient>
 {
@@ -57,12 +58,16 @@ public class ServerManager : NetworkBehaviour
             playerTurnIndex = 0;
 
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
-            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
 
             // Make up for the timing issue.   
             //OnClientConnected(NetworkManager.Singleton.LocalClientId);
             
-            StartCoroutine(WaitUntilNextFrame());            
+            StartCoroutine(WaitUntilNextFrame());
+        }
+        NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
+        if (IsClient)
+        {
+            
         }
         //Debug.Log("Client/Server/Host: " + IsClient + " " + IsServer + " " + IsHost);
 
@@ -71,8 +76,13 @@ public class ServerManager : NetworkBehaviour
         {       
             playerTurn.OnValueChanged += UpdatePlayerTurnStatus;
             UpdatePlayerTurnStatus(0, 0);
-        }        
+        }
 
+    }
+
+    public void OnClientDropped()
+    {
+        
     }
 
     private IEnumerator WaitUntilNextFrame()
@@ -93,6 +103,10 @@ public class ServerManager : NetworkBehaviour
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
     public void NextTurnServerRpc()
     {
+        NextTurn();
+    }
+    private void NextTurn()
+    {
         try
         {           
             // Next players turn.
@@ -105,6 +119,7 @@ public class ServerManager : NetworkBehaviour
             Debug.Log("Exception on Server: " + e.Message);
         }
     }
+
     [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
     public void RescrambleCardServerRpc(ulong cardIndex, CardType type)
     {
@@ -143,34 +158,26 @@ public class ServerManager : NetworkBehaviour
     // Called on Server for every client that connects.
     public void OnClientConnected(ulong clientID)
     {
-        // Only the Host/Client can spawn the player.
-
         Debug.Log("Client joined the server at ID: " + clientID);
-        
-
         clients.Add(new NetworkClient{ClientId=clientID,UserName=""});
         CardManager.Instance.SetupBoardClientRpc();
         
         UpdatePlayerTurnStatus(0, 0);
-        RequestUserNameClientRpc(new ClientRpcParams
-        {
-            Send = new ClientRpcSendParams
-            {
-                TargetClientIds = new ulong[] { clientID }
-            }
-        });
-
-        
+        RequestUserNameClientRpc(ToClient(clientID));
     }
 
+    public ClientRpcParams ToClient(ulong clientID)
+    {
+        return new ClientRpcParams{Send=new ClientRpcSendParams{TargetClientIds=new ulong[] { clientID}}};
+    }
     
-    [ClientRpc]
+    [ClientRpc(RequireOwnership=false)]
     public void RequestUserNameClientRpc(ClientRpcParams rpcParams = default)
     {
         SendUsernameServerRpc(NetworkManager.Singleton.LocalClientId, Utility.userName);        
     }
     
-    [ServerRpc(RequireOwnership = false)]
+    [ServerRpc(RequireOwnership=false)]
     public void SendUsernameServerRpc(ulong clientId, string username)
     {
         for(int i = 0; i < clients.Count; i++)
@@ -188,36 +195,42 @@ public class ServerManager : NetworkBehaviour
     // Called on Server for every client that disconnects.
     public void OnClientDisconnected(ulong clientID)
     {
-        for(int i = 0; i < clients.Count; i++)
+        bool isLocalDisconnect = clientID == NetworkManager.Singleton.LocalClientId;
+        bool isShuttingDown = !NetworkManager.Singleton.IsListening;
+        bool isSafe = !(isLocalDisconnect || isShuttingDown);
+        // If the host is shutting down, do NOT touch NetworkList or NetworkVariables.
+
+        Debug.Log("Client disconnected the server at ID: " + clientID);
+        if (IsServer && isSafe)
         {
-            if (clients[i].ClientId == clientID)
+            Debug.Log("Calling server shutdown");
+            // Only the Host/Client can spawn the player.
+            for(int i = 0; i < clients.Count; i++)
             {
-                clients.RemoveAt(i);
+                if (clients[i].ClientId == clientID)
+                {
+                    // Force a next turn.
+                    if (clientID == playerTurn.Value)
+                    {
+                        NextTurn();
+                    }
+                    clients.RemoveAt(i);     
+                    break;                               
+                }
             }
         }
-
-        // Only the Host/Client can spawn the player.
-        Debug.Log("Client disconnected the server at ID: " + clientID);
-    }
-
-
-    void Update()
-    {
-        // Start Client
-        if (Input.GetKeyUp(KeyCode.C))
+        // If Explicit Client
+        if (!IsHost && IsClient)
         {
-            NetworkManager.Singleton.StartClient();
+            Debug.Log("Calling client shutdown");
+            Utility.server_status_msg_color = Color.yellow;
+            Utility.server_status_msg = "⚠️ Lost connection to Host!";
+
+            Debug.Log("Lost connection to host, returning to main menu");
+            NetworkManager.Singleton.Shutdown();
+            SceneManager.LoadScene("MainMenu");
         }
-        // Start Server
-        if (Input.GetKeyUp(KeyCode.P))
-        {            
-            NetworkManager.Singleton.StartServer();
-        }
-        // Start Host
-        if (Input.GetKeyUp(KeyCode.H))
-        {            
-            NetworkManager.Singleton.StartHost();
-        }
+        
 
     }
 }

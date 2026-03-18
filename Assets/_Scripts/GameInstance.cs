@@ -5,6 +5,8 @@ using UnityEngine.UI;
 public static class Utility
 {
     public static string userName = "";
+    public static string server_status_msg = "";
+    public static Color server_status_msg_color = Color.white;
 }
 
 public class GameInstance : MonoBehaviour

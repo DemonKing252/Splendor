@@ -17,6 +17,7 @@ public class MainMenu : NetworkBehaviour
     [SerializeField] private Button startServerBtn;
     [SerializeField] private Button hostGameBtn;
     [SerializeField] private Button startMatchMakingBtn;
+    [SerializeField] private TMP_Text serverStatusText;
 
     public override void OnNetworkSpawn()
     {
@@ -28,14 +29,15 @@ public class MainMenu : NetworkBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        serverStatusText.text = Utility.server_status_msg;
+        serverStatusText.color = Utility.server_status_msg_color;
         Utility.userName = userName.text;
         NetworkManager.Singleton.GetComponent<UnityTransport>().ConnectionData.Address = ipAddress.text;
         NetworkManager.Singleton.GetComponent<UnityTransport>().ConnectionData.Port = ushort.Parse(portNo.text);
 
         startServerBtn.onClick.AddListener(() => NetworkManager.Singleton.StartServer() );
         hostGameBtn.onClick.AddListener(() => NetworkManager.Singleton.StartHost() );
-        startMatchMakingBtn.onClick.AddListener(() => NetworkManager.Singleton.StartClient() 
-        );
+        startMatchMakingBtn.onClick.AddListener(() => NetworkManager.Singleton.StartClient() );
         ipAddress.onValueChanged.AddListener((string msg) => NetworkManager.Singleton.GetComponent<UnityTransport>().ConnectionData.Address = msg );
         portNo.onValueChanged.AddListener((string msg) => 
             NetworkManager.Singleton.GetComponent<UnityTransport>().ConnectionData.Port = ushort.Parse(msg));
