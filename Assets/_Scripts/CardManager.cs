@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using Unity.Netcode;
+using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -695,6 +696,9 @@ public class CardManager : NetworkBehaviour
     public override void OnNetworkSpawn()
     //public void Setup()
     {
+        UnityTransport transport = (UnityTransport)NetworkManager.Singleton.NetworkConfig.NetworkTransport;
+        Debug.Log($"Binding to {transport.ConnectionData.Address}:{transport.ConnectionData.Port}");
+
         Debug.Log("Loading card manager...");
 
         int cardCount = cardBoardTransform.childCount;
