@@ -9,7 +9,6 @@ using UnityEngine.InputSystem;
 
 public struct NetworkToken : INetworkSerializable, IEquatable<NetworkToken>
 {
-    //public BoardTokenBehaviour token;
     public int TokenCount;
 
     public bool Equals(NetworkToken other)
@@ -366,7 +365,6 @@ public class CardManager : NetworkBehaviour
         Debug.Log("clicked on: " + type);
         if (!ServerManager.Instance.IsMyTurn || TokenUIManager.Instance.TurnAction != TurnAction.Hidden)
         {
-            Debug.Log("Not my turn. Returning.");
             return;
         }
             

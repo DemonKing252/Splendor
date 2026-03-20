@@ -52,37 +52,21 @@ public class ServerManager : NetworkBehaviour
     {
         if (IsServer)
         {
-
             // start with player 0.
             playerTurn.Value = 0;
             playerTurnIndex = 0;
 
             NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
-
-            // Make up for the timing issue.   
-            //OnClientConnected(NetworkManager.Singleton.LocalClientId);
             
             StartCoroutine(WaitUntilNextFrame());
         }
         NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
-        if (IsClient)
-        {
-            
-        }
-        //Debug.Log("Client/Server/Host: " + IsClient + " " + IsServer + " " + IsHost);
-
         // If the app runs as a Host but not a server *explicitly*
         if (!IsExplicitServer)
         {       
             playerTurn.OnValueChanged += UpdatePlayerTurnStatus;
             UpdatePlayerTurnStatus(0, 0);
         }
-
-    }
-
-    public void OnClientDropped()
-    {
-        
     }
 
     private IEnumerator WaitUntilNextFrame()
@@ -90,12 +74,9 @@ public class ServerManager : NetworkBehaviour
         // Wait one frame so all NetworkObjects finish spawning
         yield return null;
 
-        //if (IsClient)
-        //    OnClientConnected(NetworkManager.Singleton.LocalClientId);
         foreach(var kvp in NetworkManager.Singleton.ConnectedClients)
-        {
             OnClientConnected(kvp.Key);
-        }            
+
         UpdatePlayerTurnStatus(0, 0);
     }
 
@@ -125,9 +106,6 @@ public class ServerManager : NetworkBehaviour
     {
         // Scramble card at Network Object ID (cardIndex)
         CardManager.Instance.ScrambleCard(cardIndex, type);
-
-        // Sync cards across network
-        //CardManager.Instance.SyncBoardClientRpc(CardManager.Instance.networkCards);
     }
 
 
@@ -148,11 +126,8 @@ public class ServerManager : NetworkBehaviour
                     break;
                 }
             }
-
             CardManager.Instance.playerTurnText.text = "It's player's " + username + " turn!";
-
         } 
-
     }
 
     // Called on Server for every client that connects.
@@ -195,19 +170,17 @@ public class ServerManager : NetworkBehaviour
     // Called on Server for every client that disconnects.
     public void OnClientDisconnected(ulong clientID)
     {
-        Debug.Log("Calling Client Disconnect [ClientID,LocalID,IsServer,IsHost,IsClient]: " + 
-        clientID + "," + NetworkManager.Singleton.LocalClientId + "," + IsServer + "," + IsHost + "," + IsClient
-        );
+
         bool isLocalDisconnect = clientID == NetworkManager.Singleton.LocalClientId;
         bool isShuttingDown = !NetworkManager.Singleton.IsListening;
         // [Host] -> { [Client][Server] }
         // [Remote Client] -> {[Client]}
         // If the this is the HOST-SERVER instance not the HOST-CLIENT instance, don't touch the variables.
 
-        Debug.Log("Client disconnected the server at ID: " + clientID);
         if (IsServer && !(isLocalDisconnect || isShuttingDown))
         {
-            Debug.Log("Calling server shutdown");
+            
+            Debug.Log("Client disconnected the server at ID: " + clientID);
             // Only the Host/Client can spawn the player.
             for(int i = 0; i < clients.Count; i++)
             {

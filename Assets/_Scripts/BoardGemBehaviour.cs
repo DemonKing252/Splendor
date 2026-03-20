@@ -12,6 +12,6 @@ public class BoardTokenBehaviour : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         if (!ServerManager.Instance.IsExplicitServer)
-            GetComponent<Button>().onClick.AddListener(() => { Debug.Log("clicked token"); onTokenClicked?.Invoke(gemStoneType); });     
+            GetComponent<Button>().onClick.AddListener(() => { onTokenClicked?.Invoke(gemStoneType); });     
     }
 }

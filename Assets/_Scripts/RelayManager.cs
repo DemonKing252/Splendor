@@ -1,3 +1,4 @@
+using System.Data.SqlTypes;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using Unity.Networking.Transport.Relay;
@@ -22,12 +23,14 @@ public class RelayManager : MonoBehaviour
     {
         await UnityServices.InitializeAsync();
 
+        if (AuthenticationService.Instance.IsSignedIn)
+            return;
+
         AuthenticationService.Instance.SignedIn += () =>
         {
             Debug.Log("Signed in: " + AuthenticationService.Instance.PlayerId);
         };
         await AuthenticationService.Instance.SignInAnonymouslyAsync();
-
     }
 
     public async void CreateRelay()
