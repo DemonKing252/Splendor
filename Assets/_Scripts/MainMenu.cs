@@ -10,16 +10,23 @@ using System.Runtime.InteropServices;
 
 public class MainMenu : NetworkBehaviour
 {
+    private static MainMenu instance;
+    public static MainMenu Instance => instance;
     public bool IsExplicitServer => IsServer && !IsHost;
     [SerializeField] private TMP_InputField userName;
     [SerializeField] private TMP_InputField ipAddress;
     [SerializeField] private TMP_InputField portNo;
+    [SerializeField] private TMP_InputField relayID;
 
 
     [SerializeField] private Button startServerBtn;
     [SerializeField] private Button hostGameBtn;
     [SerializeField] private Button startMatchMakingBtn;
     [SerializeField] private TMP_Text serverStatusText;
+    void Awake()
+    {
+        instance = this;
+    }
 
     private bool connectionSuccess = false;
     public override void OnNetworkSpawn()
@@ -29,31 +36,10 @@ public class MainMenu : NetworkBehaviour
         if (IsHost || IsServer)            
                 NetworkManager.SceneManager.LoadScene("Main", LoadSceneMode.Single);        
     }
-    private void SetMenuStatus(string msg, Color col)
+    public void SetMenuStatus(string msg, Color col)
     {        
         serverStatusText.text = msg;
         serverStatusText.color = col;
-    }
-    private IEnumerator AttemptConnection()
-    {
-        float t = 0f;
-        NetworkManager.Singleton.StartClient();
-
-        
-        SetMenuStatus("Trying to connect...", Color.white);
-        while (t < 2f)  // Give the server 2000 m/s to respond, if no hand shake -> shut down network and prompt user.
-        {
-            if (connectionSuccess)
-            {
-                NetworkManager.SceneManager.LoadScene("Main", LoadSceneMode.Single);
-                yield break;
-            }
-
-            t += Time.deltaTime;
-            yield return null;
-        }
-        SetMenuStatus("Unknown Host!", Color.yellow);
-        NetworkManager.Shutdown();
     }
     public bool ValidateIP(string msg)
     {
@@ -93,14 +79,8 @@ public class MainMenu : NetworkBehaviour
                 NetworkManager.Singleton.StartServer();
         });
 
-        hostGameBtn.onClick.AddListener(() => {
-            if (ValidateIP(ipAddress.text) && ValidatePort(portNo.text)) 
-                NetworkManager.Singleton.StartHost();
-        });
-        startMatchMakingBtn.onClick.AddListener(() => {
-            if (ValidateIP(ipAddress.text) && ValidatePort(portNo.text)) 
-                StartCoroutine(AttemptConnection());
-        });
+        hostGameBtn.onClick.AddListener(() => RelayManager.Instance.CreateRelay() );
+        startMatchMakingBtn.onClick.AddListener(() => RelayManager.Instance.JoinRelay(relayID.text) );
         userName.onValueChanged.AddListener((string user) => Utility.userName = userName.text);
     }
 
