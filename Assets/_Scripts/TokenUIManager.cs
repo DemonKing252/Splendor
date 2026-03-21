@@ -71,7 +71,7 @@ public class TokenUIManager : MonoBehaviour
     {
         if (!ServerManager.Instance.IsMyTurn || TurnAction != TurnAction.Hidden)
         {
-            Debug.Log("Returning, not showing UI");
+            //Debug.Log("Returning, not showing UI");
             return;
         }
 
@@ -88,23 +88,37 @@ public class TokenUIManager : MonoBehaviour
 
                 // Reserve is full and we can't afford the card
                 if (card.CardType == CardType.Development && !CardManager.Instance.CurrentyMet(card) && CardManager.Instance.ReserveFull().Item1)
+                {
+                    WarningMessage.Instance.SetWarningText("Cannot reserve more then 3 cards!", Color.yellow);
                     return;
+                }
 
                 // We can't afford the Noble
                 if (card.CardType == CardType.Noble && !CardManager.Instance.CurrentyMet(card))
+                {
+                    WarningMessage.Instance.SetWarningText("Cannot afford this noble card!", Color.yellow);
                     return;
+                }
 
                 // We can't afford the Reserved card
                 if (card.CardType == CardType.Reserve && !CardManager.Instance.CurrentyMet(card))
+                {
+                    WarningMessage.Instance.SetWarningText("Cannot afford this reserve card!", Color.yellow);
                     return;
+                }
 
                 activeUICanvas = buyAndReserveUI;
                 if (card.CardType == CardType.Reserve || 
                     card.CardType == CardType.Noble) {
                     reserveBtn.gameObject.SetActive(false);
+                    
                 }
                 else if (card.CardType == CardType.Development)
                     reserveBtn.gameObject.SetActive(true);
+                
+                if (!CardManager.Instance.CurrentyMet(card))
+                    WarningMessage.Instance.SetWarningText("Cannot afford this development card!", Color.yellow);
+                    
                 
                 buyBtn.gameObject.SetActive(CardManager.Instance.CurrentyMet(card));
                 this.activeCardGO = go;

@@ -167,7 +167,10 @@ public class CardManager : NetworkBehaviour
     {
         // Cannot reserve Noble cards and cards that are already reserved.
         if (go.GetComponent<CardBehaviour>().CardType != CardType.Development)
+        {
+            WarningMessage.Instance.SetWarningText("You can't reserve a card more then once!", Color.yellow);
             return;
+        }
 
         
         int reserveIndex = ReserveFull().Item2;
@@ -206,8 +209,7 @@ public class CardManager : NetworkBehaviour
         }
         else
         {
-            // TODO: Prompt with UI eventually
-            Debug.Log("You can't reserve more then 3 cards!");
+            WarningMessage.Instance.SetWarningText("You can't reserve more then 3 cards!", Color.yellow);
         } 
     }
     /*
