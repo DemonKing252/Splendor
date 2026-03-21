@@ -362,15 +362,13 @@ public class CardManager : NetworkBehaviour
 
     public void OnTokenClicked(GemStoneType type)
     {
-        Debug.Log("clicked on: " + type);
-        if (!ServerManager.Instance.IsMyTurn || TokenUIManager.Instance.TurnAction != TurnAction.Hidden)
+        if (!ServerManager.Instance.IsMyTurn) //  || TokenUIManager.Instance.TurnAction != TurnAction.Hidden
         {
             return;
         }
             
         int tokenCount = networkBoardTokens[(int)type].TokenCount;
 
-        Debug.Log("Token count: " + networkBoardTokens[(int)type].TokenCount.ToString());
         
         TokensInHand[(int)type]++;
 
@@ -401,10 +399,18 @@ public class CardManager : NetworkBehaviour
         }
 
         
-        if (maxStack > 1 || reservedTokenSlots > 2)
-            TokenUIManager.Instance.ShowConfirmUI(TurnAction.Collect_Token);
-            //confirmMsg.gameObject.SetActive(true);
-        
+        if (maxStack > 0)
+        {
+            TokenUIManager.Instance.ShowUI(TurnAction.Collect_Token);
+            if (maxStack > 1 || reservedTokenSlots > 2)
+            {
+                TokenUIManager.Instance.ShowTokenCollectorConfirmButton(true);
+            }
+            else
+            {                
+                TokenUIManager.Instance.ShowTokenCollectorConfirmButton(false);
+            }
+        }
         tokenCount--;
         inventoryTokens[(int)type].TokenCount++;
         
@@ -692,12 +698,7 @@ public class CardManager : NetworkBehaviour
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     public override void OnNetworkSpawn()
-    //public void Setup()
     {
-        UnityTransport transport = (UnityTransport)NetworkManager.Singleton.NetworkConfig.NetworkTransport;
-        Debug.Log($"Binding to {transport.ConnectionData.Address}:{transport.ConnectionData.Port}");
-
-        Debug.Log("Loading card manager...");
 
         int cardCount = cardBoardTransform.childCount;
 
@@ -706,12 +707,6 @@ public class CardManager : NetworkBehaviour
             Debug.LogError("ERROR: Card count is not supposed to be: " + cardCount);
         }
 
-        // Server sets up the board
-        
-        // Server Sets up Board -> Client recieves the board map & sets up network Ids -> S
-        //networkBoardTokens = new NetworkToken[6];
-        
-        
         permaDiscountTokens = new LocalizedToken[6];
         cardGOs = new CardBehaviour[cardCount];
 

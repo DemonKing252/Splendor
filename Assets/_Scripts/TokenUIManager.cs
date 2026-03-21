@@ -62,8 +62,12 @@ public class TokenUIManager : MonoBehaviour
         );
 
     }
+    public void ShowTokenCollectorConfirmButton(bool show)
+    {
+        confirmBtn.gameObject.SetActive(show);
+    }
 
-    public void ShowConfirmUI(TurnAction action, GameObject go = null)
+    public void ShowUI(TurnAction action, GameObject go = null)
     {
         if (!ServerManager.Instance.IsMyTurn || TurnAction != TurnAction.Hidden)
         {

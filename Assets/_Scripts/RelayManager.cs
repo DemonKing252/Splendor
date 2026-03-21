@@ -40,7 +40,7 @@ public class RelayManager : MonoBehaviour
             Allocation alloc = await RelayService.Instance.CreateAllocationAsync(15);
             string joinCode = await RelayService.Instance.GetJoinCodeAsync(alloc.AllocationId);
 
-            RelayServerData relayServer = AllocationUtils.ToRelayServerData(alloc, "wss");
+            RelayServerData relayServer = AllocationUtils.ToRelayServerData(alloc, "udp");
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServer);
 
 
@@ -59,7 +59,7 @@ public class RelayManager : MonoBehaviour
         {
             JoinAllocation alloc = await RelayService.Instance.JoinAllocationAsync(joinCode);            
             
-            RelayServerData relayServer = AllocationUtils.ToRelayServerData(alloc, "wss");
+            RelayServerData relayServer = AllocationUtils.ToRelayServerData(alloc, "udp");
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServer);
 
             NetworkManager.Singleton.StartClient();

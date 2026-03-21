@@ -7,6 +7,7 @@ using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using System.Collections;
 using System.Runtime.InteropServices;
+using static Unity.Netcode.Transports.UTP.UnityTransport;
 
 public class MainMenu : NetworkBehaviour
 {
@@ -23,6 +24,10 @@ public class MainMenu : NetworkBehaviour
     [SerializeField] private Button hostGameBtn;
     [SerializeField] private Button startMatchMakingBtn;
     [SerializeField] private TMP_Text serverStatusText;
+
+    [SerializeField] private Toggle localHostToggle;
+
+
     void Awake()
     {
         instance = this;
@@ -36,6 +41,21 @@ public class MainMenu : NetworkBehaviour
         if (IsHost || IsServer)            
                 NetworkManager.SceneManager.LoadScene("Main", LoadSceneMode.Single);        
     }
+    private IEnumerator TryConnect()
+    {
+        float t = 0f;
+        SetMenuStatus("Trying to connect...", Color.white);
+        while (t < 3f) // Wait 3 seconds for a connection then time out.
+        {
+            if (connectionSuccess)
+                yield break;
+            yield return null;
+            t += Time.deltaTime;
+        }
+        SetMenuStatus("Unknown Host!", Color.yellow);
+        NetworkManager.Singleton.Shutdown();
+    }
+
     public void SetMenuStatus(string msg, Color col)
     {        
         serverStatusText.text = msg;
@@ -71,16 +91,40 @@ public class MainMenu : NetworkBehaviour
         
         SetMenuStatus(Utility.server_status_msg, Utility.server_status_msg_color);
         Utility.userName = userName.text;
-        NetworkManager.Singleton.GetComponent<UnityTransport>().ConnectionData.Address = ipAddress.text;
-        NetworkManager.Singleton.GetComponent<UnityTransport>().ConnectionData.Port = ushort.Parse(portNo.text);
 
         startServerBtn.onClick.AddListener(() => {
             if (ValidateIP(ipAddress.text) && ValidatePort(portNo.text)) 
                 NetworkManager.Singleton.StartServer();
         });
 
-        hostGameBtn.onClick.AddListener(() => RelayManager.Instance.CreateRelay() );
-        startMatchMakingBtn.onClick.AddListener(() => RelayManager.Instance.JoinRelay(relayID.text) );
+        hostGameBtn.onClick.AddListener(() => {
+            if (!localHostToggle.isOn)
+                RelayManager.Instance.CreateRelay();
+            else
+            {                
+                NetworkManager.Singleton.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", 25565);
+                NetworkManager.Singleton.StartHost();
+            }
+        });
+
+        startMatchMakingBtn.onClick.AddListener(() => { 
+            if (!localHostToggle.isOn)
+            {
+                if (relayID.text == "")
+                {
+                    SetMenuStatus("You cannot have a blank Relay ID!", Color.yellow);
+                    relayID.text = "LHGGCJ";
+                }
+                
+                RelayManager.Instance.JoinRelay(relayID.text);                
+            }
+            else
+            {
+                NetworkManager.Singleton.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", 25565);
+                NetworkManager.Singleton.StartClient();
+                StartCoroutine(TryConnect());
+            }
+        });
         userName.onValueChanged.AddListener((string user) => Utility.userName = userName.text);
     }
 
