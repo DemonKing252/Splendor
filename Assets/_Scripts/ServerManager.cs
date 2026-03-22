@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using Unity.Collections;
 using Unity.Netcode;
+using Unity.Services.Lobbies.Models;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -107,14 +108,18 @@ public class ServerManager : NetworkBehaviour
         // Scramble card at Network Object ID (cardIndex)
         CardManager.Instance.ScrambleCard(cardIndex, type);
     }
-
+    [ClientRpc(RequireOwnership = false)]
+    public void UpdatePlayerTurnStatusClientRpc()
+    {
+        UpdatePlayerTurnStatus(0, playerTurn.Value);
+    }
 
     public void UpdatePlayerTurnStatus(ulong oldValue, ulong newValue)
     {
 
         // This client's IP address matches the IP address of who's turn it is:
         if (NetworkManager.Singleton.LocalClientId == newValue)
-            CardManager.Instance.playerTurnText.text = "It's your turn!";
+            DialogueManager.Instance.SetTurnStatusText("It's your turn!", Color.yellow, ImgType.Finger);
         else
         {
             string username = null;
@@ -126,7 +131,7 @@ public class ServerManager : NetworkBehaviour
                     break;
                 }
             }
-            CardManager.Instance.playerTurnText.text = "It's player's " + username + " turn!";
+            DialogueManager.Instance.SetTurnStatusText("It's " + username + " turn!", Color.white, ImgType.HourGlass);
         } 
     }
 
@@ -139,6 +144,7 @@ public class ServerManager : NetworkBehaviour
         
         UpdatePlayerTurnStatus(0, 0);
         RequestUserNameClientRpc(ToClient(clientID));
+        UpdatePlayerTurnStatusClientRpc();
     }
 
     public ClientRpcParams ToClient(ulong clientID)

@@ -81,7 +81,6 @@ public class CardManager : NetworkBehaviour
 {
     [SerializeField] private Transform cardBoardTransform;
     [SerializeField] private Transform boardTokenTableTransform;
-    [SerializeField] public TMP_Text playerTurnText;
 
       
     //public NetworkToken[] networkBoardTokens;
@@ -168,7 +167,7 @@ public class CardManager : NetworkBehaviour
         // Cannot reserve Noble cards and cards that are already reserved.
         if (go.GetComponent<CardBehaviour>().CardType != CardType.Development)
         {
-            WarningMessage.Instance.SetWarningText("You can't reserve a card more then once!", Color.yellow);
+            DialogueManager.Instance.SetWarningText("You can't reserve a card more then once!", Color.yellow);
             return;
         }
 
@@ -209,7 +208,7 @@ public class CardManager : NetworkBehaviour
         }
         else
         {
-            WarningMessage.Instance.SetWarningText("You can't reserve more then 3 cards!", Color.yellow);
+            DialogueManager.Instance.SetWarningText("You can't reserve more then 3 cards!", Color.yellow);
         } 
     }
     /*
@@ -264,8 +263,9 @@ public class CardManager : NetworkBehaviour
             
         if (!CurrentyMet(card))
         {
-            // Eventually we'll have UI messages for this. 
-            Debug.Log("Not enough currency.");
+            if (card.CardType == CardType.Development)
+                DialogueManager.Instance.SetWarningText("Cannot afford this development card!", Color.yellow);
+
             return;
         }
         else
@@ -366,6 +366,7 @@ public class CardManager : NetworkBehaviour
     {
         if (!ServerManager.Instance.IsMyTurn) //  || TokenUIManager.Instance.TurnAction != TurnAction.Hidden
         {
+            DialogueManager.Instance.SetWarningText("Wait for your turn!", Color.yellow);
             return;
         }
             
