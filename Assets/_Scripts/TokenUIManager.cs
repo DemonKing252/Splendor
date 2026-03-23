@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Linq;
 using Unity.VisualScripting.Antlr3.Runtime;
 using UnityEngine;
 using UnityEngine.UI;
@@ -69,20 +70,26 @@ public class TokenUIManager : MonoBehaviour
 
     public void ShowUI(TurnAction action, GameObject go = null)
     {
+        Debug.Log("Got here 0");
         if (!ServerManager.Instance.IsMyTurn)
         {
             DialogueManager.Instance.SetWarningText("Wait for your turn!", Color.yellow);
         }
+        Debug.Log("Got here 1");
         // Don't show the UI if is already active, this can cause unexpected problems when collecting tokens while buying a card at the same time.
         if (activeUICanvas != null)
-            if (activeUICanvas.activeSelf)
+            if (activeUICanvas.activeSelf && CardManager.Instance.TokensInHand.Sum() > 0)
                 return;
+        Debug.Log("Got here 2");
 
-        if (!ServerManager.Instance.IsMyTurn || TurnAction != TurnAction.Hidden) // If we select a different GO, select it.
-        {
+        // No exceptions to this rule if its not our turn, we cannot click the card
+        if (!ServerManager.Instance.IsMyTurn) // If we select a different GO, select it.
             return;
-        }
-        Debug.Log("Trying to show UI");
+        Debug.Log("Got here 3");
+
+        if (TurnAction != TurnAction.Hidden && go == activeCardGO) // If we select a different GO, select it.
+            return;
+        Debug.Log("Got here 4");
         
         switch(action)
         {
@@ -94,6 +101,8 @@ public class TokenUIManager : MonoBehaviour
             break;
             case TurnAction.Buy_OR_Reserve:
                 CardBehaviour card = go.GetComponent<CardBehaviour>();
+                if (go != null)
+                    Debug.Log("Setting active card to: " + go.name);
 
                 // Reserve is full and we can't afford the card
                 if (card.CardType == CardType.Development && !CardManager.Instance.CurrentyMet(card) && CardManager.Instance.ReserveFull().Item1)

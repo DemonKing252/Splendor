@@ -102,7 +102,7 @@ public class MainMenu : NetworkBehaviour
                 RelayManager.Instance.CreateRelay();
             else
             {                
-                NetworkManager.Singleton.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", 25565);
+                NetworkManager.Singleton.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", 5491);
                 NetworkManager.Singleton.StartHost();
             }
         });
@@ -120,7 +120,7 @@ public class MainMenu : NetworkBehaviour
             }
             else
             {
-                NetworkManager.Singleton.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", 25565);
+                NetworkManager.Singleton.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", 5491);
                 NetworkManager.Singleton.StartClient();
                 StartCoroutine(TryConnect());
             }
