@@ -364,11 +364,13 @@ public class CardManager : NetworkBehaviour
 
     public void OnTokenClicked(GemStoneType type)
     {
-        if (!ServerManager.Instance.IsMyTurn) //  || TokenUIManager.Instance.TurnAction != TurnAction.Hidden
+        if (!ServerManager.Instance.IsMyTurn)   
         {
             DialogueManager.Instance.SetWarningText("Wait for your turn!", Color.yellow);
             return;
         }
+        if (TokenUIManager.Instance.TurnAction == TurnAction.Buy_OR_Reserve)
+            return;
             
         int tokenCount = networkBoardTokens[(int)type].TokenCount;
 

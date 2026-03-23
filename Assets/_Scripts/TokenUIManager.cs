@@ -21,7 +21,7 @@ public class TokenUIManager : MonoBehaviour
     public TurnAction TurnAction => turnAction;
 
     private GameObject activeUICanvas = null;
-    private GameObject activeCardGO = null;
+    [SerializeField] private GameObject activeCardGO = null;
 
     [Header("Token Collection")]
     [SerializeField] private GameObject tokenCollectionUI;
@@ -73,12 +73,16 @@ public class TokenUIManager : MonoBehaviour
         {
             DialogueManager.Instance.SetWarningText("Wait for your turn!", Color.yellow);
         }
+        // Don't show the UI if is already active, this can cause unexpected problems when collecting tokens while buying a card at the same time.
+        if (activeUICanvas != null)
+            if (activeUICanvas.activeSelf)
+                return;
 
-        if (!ServerManager.Instance.IsMyTurn || TurnAction != TurnAction.Hidden)
+        if (!ServerManager.Instance.IsMyTurn || TurnAction != TurnAction.Hidden) // If we select a different GO, select it.
         {
             return;
         }
-
+        Debug.Log("Trying to show UI");
         
         switch(action)
         {
@@ -86,6 +90,7 @@ public class TokenUIManager : MonoBehaviour
                 activeUICanvas = tokenCollectionUI;
                 this.activeCardGO = go;
                 turnAction = action;
+                activeUICanvas.SetActive(true);
             break;
             case TurnAction.Buy_OR_Reserve:
                 CardBehaviour card = go.GetComponent<CardBehaviour>();
@@ -123,16 +128,18 @@ public class TokenUIManager : MonoBehaviour
                 buyBtn.gameObject.SetActive(CardManager.Instance.CurrentyMet(card));
                 this.activeCardGO = go;
                 turnAction = action;
+                activeUICanvas.SetActive(true);
             break;
         
         }
-
-        activeUICanvas.SetActive(true);
     }
     public void HideConfirmUI()
     {
-        activeUICanvas.SetActive(false);
-        activeUICanvas = null;
+        if (activeUICanvas != null)
+        {            
+            activeUICanvas.SetActive(false);
+            activeUICanvas = null;
+        }
 
         tokenCollectionUI.SetActive(false);
         buyAndReserveUI.SetActive(false);
