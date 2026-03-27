@@ -33,14 +33,14 @@ public class RelayManager : MonoBehaviour
         await AuthenticationService.Instance.SignInAnonymouslyAsync();
     }
 
-    public async void CreateRelay()
+    public async void CreateRelay(string protocol)
     {
         try
         {
             Allocation alloc = await RelayService.Instance.CreateAllocationAsync(15);
             string joinCode = await RelayService.Instance.GetJoinCodeAsync(alloc.AllocationId);
 
-            RelayServerData relayServer = AllocationUtils.ToRelayServerData(alloc, "udp");
+            RelayServerData relayServer = AllocationUtils.ToRelayServerData(alloc, protocol);
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServer);
 
 
@@ -53,13 +53,13 @@ public class RelayManager : MonoBehaviour
             Debug.Log("ERROR when creating relay: " + e.Message);
         }
     }
-    public async void JoinRelay(string joinCode)
+    public async void JoinRelay(string joinCode, string protocol)
     {
         try
         {
             JoinAllocation alloc = await RelayService.Instance.JoinAllocationAsync(joinCode);            
             
-            RelayServerData relayServer = AllocationUtils.ToRelayServerData(alloc, "udp");
+            RelayServerData relayServer = AllocationUtils.ToRelayServerData(alloc, protocol);
             NetworkManager.Singleton.GetComponent<UnityTransport>().SetRelayServerData(relayServer);
 
             NetworkManager.Singleton.StartClient();

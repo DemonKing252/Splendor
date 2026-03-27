@@ -88,6 +88,15 @@ public class MainMenu : NetworkBehaviour
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
+        #if UNITY_WEBGL && !UNITY_EDITOR
+            startServerBtn.interactable = false;
+            hostGameBtn.interactable = false;
+            localHostToggle.isOn = false;   // Don't use local host for a WebGL Build.
+            localHostToggle.gameObject.SetActive(false);
+        #else            
+            startServerBtn.interactable = true;
+            hostGameBtn.interactable = true;
+        #endif
         
         SetMenuStatus(Utility.server_status_msg, Utility.server_status_msg_color);
         Utility.userName = userName.text;
@@ -99,9 +108,15 @@ public class MainMenu : NetworkBehaviour
 
         hostGameBtn.onClick.AddListener(() => {
             if (!localHostToggle.isOn)
-                RelayManager.Instance.CreateRelay();
+            {
+                NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
+                RelayManager.Instance.CreateRelay("wss");
+
+                
+            }
             else
             {                
+                NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = false;
                 NetworkManager.Singleton.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", 5491);
                 NetworkManager.Singleton.StartHost();
             }
@@ -116,10 +131,13 @@ public class MainMenu : NetworkBehaviour
                     relayID.text = "LHGGCJ";
                 }
                 
-                RelayManager.Instance.JoinRelay(relayID.text);                
+                NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = true;
+                
+                RelayManager.Instance.JoinRelay(relayID.text, "wss");                
             }
             else
             {
+                NetworkManager.Singleton.GetComponent<UnityTransport>().UseWebSockets = false;
                 NetworkManager.Singleton.GetComponent<UnityTransport>().SetConnectionData("127.0.0.1", 5491);
                 NetworkManager.Singleton.StartClient();
                 StartCoroutine(TryConnect());
